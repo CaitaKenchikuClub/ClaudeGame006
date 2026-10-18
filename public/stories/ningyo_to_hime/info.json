@@ -1,13 +1,18 @@
 {
   "id": "ningyo_to_hime",
-  "title": "",
-  "author": "",
-  "cover": "",
-  "summary": "",
-  "synopsis": "",
-  "genre": "",
-  "originalUrl": "",
+  "title": "人魚と姫",
+  "author": "ぞ",
+  "cover": "cover.webp",
+  "summary": "求められた救世の結婚。姫は親友の人魚の手を取る。百合×王道ファンタジー",
+  "synopsis": "「なら、わたしとケッコンすればいいんじゃない？」\n\n結婚相手に悩む姫に、親友の人魚が明るく告げた。\n\n世界を救う予言のため、早急な結婚と世継ぎを求められたフィオーレ王国の姫、サクラ。\n知らない他人との結婚に絶望するサクラの手を取ったのは、親友のルリだった。\n\n世間知らずの姫と、親友の人魚。\n二人が手探りで始めるのは、世界を救うための、少しおかしな婚約生活。\n\nこれは、世界を蝕む『災い』に立ち向かう二人が、本当の愛を知る物語。",
+  "genre": "百合",
+  "originalUrl": "https://caita.ai/series/01KGCSJZ1RBQDZB05VKKEB3SVZ",
   "episodes": [
-    { "id": "episode_01", "title": "", "file": "episode_01.txt", "order": 1 }
+    {
+      "id": "episode_maidkiss_01",
+      "title": "メイド二人の甘い約束",
+      "file": "episode_maidkiss_01.txt",
+      "order": 1
+    }
   ]
 }
