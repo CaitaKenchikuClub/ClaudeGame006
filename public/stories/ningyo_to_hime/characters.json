@@ -1,3 +1,28 @@
 {
-  "characters": []
+  "characters": [
+    {
+      "id": "kiwi",
+      "name": "キウイ",
+      "image": "wiki_bust.webp",
+      "height": 50
+    },
+    {
+      "id": "cherry",
+      "name": "チェリー",
+      "image": "cherry_bust.webp",
+      "height": 50
+    },
+    {
+      "id": "kiwi_l",
+      "name": "キウイ全身",
+      "image": "wiki.webp",
+      "height": 85
+    },
+    {
+      "id": "cherry_l",
+      "name": "チェリー全身",
+      "image": "cherry.webp",
+      "height": 85
+    }
+  ]
 }
