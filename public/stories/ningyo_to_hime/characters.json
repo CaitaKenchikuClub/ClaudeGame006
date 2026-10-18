@@ -3,7 +3,7 @@
     {
       "id": "kiwi",
       "name": "キウイ",
-      "image": "wiki_bust.webp",
+      "image": "kiwi_bust.webp",
       "height": 50
     },
     {
@@ -15,7 +15,7 @@
     {
       "id": "kiwi_l",
       "name": "キウイ全身",
-      "image": "wiki.webp",
+      "image": "kiwi.webp",
       "height": 85
     },
     {
