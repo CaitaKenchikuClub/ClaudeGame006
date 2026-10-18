@@ -19,13 +19,15 @@ React + TypeScript + Vite で作成し、GitHub Pages で公開しています�
 
 設定ファイル（JSON）は **[設定ファイル作成ツール](https://caitakenchikuclub.github.io/ClaudeGame006/tools/json-generator.html)** で、入力欄に書くだけで作れます（コピー・ダウンロード・既存ファイルの読み込みに対応）。
 
+シナリオは **[シナリオエディタ](https://caitakenchikuclub.github.io/ClaudeGame006/tools/scenario-editor.html)** で、コマンドをボタンで入れながら書けます（登録済みの名前を選択・かんたんチェック・ダウンロードに対応）。
+
 ## フォルダ構成
 
 ```
 public/stories/          … 作品データ（作品ごとにフォルダを分けて管理）
   catalog.json           … 作品一覧（ここに書いた順に並ぶ）
   novel_001/             … 作品フォルダ（info.json・characters.json・assets.json・シナリオ・素材）
-public/tools/             … 設定ファイル作成ツール（json-generator.html）
+public/tools/            … 設定ファイル作成ツール（json-generator.html）、シナリオエディタ（scenario-editor.html）
 templates/story_template … 新しい作品のひな形（設定ファイルのみ・中身は空）
 docs/                    … 説明書
 src/                     … ゲーム本体

@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>シナリオエディタ</title>
+    <style>
+      :root {
+        --bg: #1b1d24;
+        --surface: #262933;
+        --surface-2: #30343f;
+        --text: #ecebe8;
+        --text-sub: #a9abb3;
+        --accent: #d9a35b;
+        --warn: #e5b56b;
+        font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body { display: flex; flex-direction: column; padding: 10px; gap: 8px; max-width: 960px; margin: 0 auto; }
+      button, input, select, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      h1 { font-size: 16px; margin: 0 8px 0 0; }
+      .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .btn {
+        padding: 6px 10px;
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        background: var(--surface);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .btn:active { background: var(--surface-2); }
+      .btn.cmd { border-color: rgba(217, 163, 91, 0.45); }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+      input[type='text'], select {
+        padding: 6px 8px;
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        background: var(--bg);
+        font-size: 13px;
+      }
+      .story { font-size: 12px; color: var(--text-sub); }
+      #picker { display: none; padding: 8px; border-radius: 10px; background: var(--surface); }
+      #picker.open { display: flex; }
+      #picker .label { font-size: 12px; color: var(--text-sub); width: 100%; margin-bottom: 2px; }
+      textarea {
+        flex: 1;
+        min-height: 300px;
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+        background: #14161c;
+        font-size: 15px;
+        line-height: 1.8;
+        resize: none;
+        tab-size: 2;
+      }
+      textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+      #problems { margin: 0; padding: 0 0 0 1.2em; color: var(--warn); font-size: 12px; line-height: 1.6; max-height: 6.5em; overflow: auto; }
+      #problems:empty { display: none; }
+      footer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .toast { color: var(--accent); font-size: 13px; }
+      .help { font-size: 12px; color: var(--text-sub); }
+      .help a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>シナリオエディタ</h1>
+      <span class="story">作品：</span>
+      <select id="story-select"><option value="">（選ばなくても使えます）</option></select>
+      <input type="text" id="story-id" placeholder="作品ID を直接入力" size="14" />
+      <button class="btn" id="story-load">読み込む</button>
+      <span class="story" id="story-status"></span>
+    </header>
+
+    <div class="bar" id="commands"></div>
+    <div class="bar" id="picker"></div>
+
+    <textarea id="editor" spellcheck="false" placeholder="ボタンでコマンドを入れて、その下に文章を書きます。"></textarea>
+    <ul id="problems"></ul>
+
+    <footer>
+      <button class="btn primary" id="download">ダウンロード</button>
+      <input type="text" id="filename" value="episode_01.txt" size="16" title="ダウンロードするファイル名" />
+      <button class="btn" id="copy">コピー</button>
+      <label class="btn">ファイルを開く<input type="file" id="open" accept=".txt,text/plain" hidden /></label>
+      <button class="btn" id="clear">新規</button>
+      <span class="toast" id="toast"></span>
+      <span class="help">書き方は <a href="https://github.com/CaitaKenchikuClub/ClaudeGame006/blob/main/docs/シナリオの書き方.md" target="_blank" rel="noopener">シナリオの書き方</a></span>
+    </footer>
+
+    <script>
+      'use strict';
+
+      const editor = document.getElementById('editor');
+      const picker = document.getElementById('picker');
+      const STORAGE_KEY = 'novel-collab-scenario-editor';
+
+      // 作品を読み込むと、登録済みの名前がここに入る
+      let names = { characters: [], expressions: {}, backgrounds: [], stills: [], bgm: [], se: [] };
+      let storyLoaded = false;
+
+      // ---------- コマンドのボタン ----------
+      // kind：名前の候補の種類。line：入れる文字。none：「なし」も候補に出す
+      const COMMANDS = [
+        { label: '背景', kind: 'backgrounds', line: (n) => `#背景 ${n}` },
+        { label: 'キャラ（中央）', kind: 'characters', line: (n) => `#キャラ画像 ${n}` },
+        { label: 'キャラ（左）', kind: 'characters', line: (n) => `#キャラ画像左 ${n}`, none: true },
+        { label: 'キャラ（右）', kind: 'characters', line: (n) => `#キャラ画像右 ${n}`, none: true },
+        { label: 'キャラを全部消す', line: () => '#キャラ画像 なし' },
+        { label: '台詞', kind: 'characters', line: (n) => `#台詞 ${n}` },
+        { label: 'モノローグ', line: () => '#モノローグ' },
+        { label: '表情', kind: 'expressions', line: (n) => `#表情 ${n}` },
+        { label: 'スチル', kind: 'stills', line: (n) => `#スチル ${n}`, none: true },
+        { label: 'BGM', kind: 'bgm', line: (n) => `#BGM ${n}`, none: true },
+        { label: '効果音', kind: 'se', line: (n) => `#効果音 ${n}` },
+        { label: '終了', line: () => '#終了' },
+      ];
+
+      const commandBar = document.getElementById('commands');
+      for (const cmd of COMMANDS) {
+        const b = document.createElement('button');
+        b.className = 'btn cmd';
+        b.textContent = cmd.label;
+        b.addEventListener('click', () => onCommand(cmd));
+        commandBar.append(b);
+      }
+
+      function onCommand(cmd) {
+        if (!cmd.kind) {
+          closePicker();
+          insertCommand(cmd.line());
+          return;
+        }
+        // 表情は「キャラ名 表情名」の組み合わせを候補にする
+        const options =
+          cmd.kind === 'expressions'
+            ? Object.entries(names.expressions).flatMap(([c, list]) => list.map((e) => `${c} ${e}`)).concat(names.characters.map((c) => `${c} なし`))
+            : [...names[cmd.kind], ...(cmd.none ? ['なし'] : [])];
+        if (!storyLoaded || options.length === 0) {
+          // 候補がないときは、名前の手前までを入れて続きを手で書いてもらう
+          closePicker();
+          insertCommand(cmd.line(''), true);
+          return;
+        }
+        openPicker(cmd, options);
+      }
+
+      function openPicker(cmd, options) {
+        picker.replaceChildren();
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = `「${cmd.label}」に入れる名前を選んでください`;
+        picker.append(label);
+        for (const opt of options) {
+          const b = document.createElement('button');
+          b.className = 'btn';
+          b.textContent = opt;
+          b.addEventListener('click', () => {
+            closePicker();
+            insertCommand(cmd.line(opt));
+          });
+          picker.append(b);
+        }
+        const other = document.createElement('button');
+        other.className = 'btn';
+        other.textContent = 'ほかの名前（手で書く）';
+        other.addEventListener('click', () => {
+          closePicker();
+          insertCommand(cmd.line(''), true);
+        });
+        const cancel = document.createElement('button');
+        cancel.className = 'btn';
+        cancel.textContent = 'やめる';
+        cancel.addEventListener('click', () => { closePicker(); editor.focus(); });
+        picker.append(other, cancel);
+        picker.classList.add('open');
+      }
+      const closePicker = () => picker.classList.remove('open');
+
+      /**
+       * カーソルのある行にコマンドを1行で入れる（行に文字があれば、その下の行に入れる）。
+       * typeName：名前を手で書くので、コマンドの行末にカーソルを残す
+       */
+      function insertCommand(line, typeName = false) {
+        editor.focus();
+        const v = editor.value;
+        const pos = editor.selectionStart;
+        const lineStart = v.lastIndexOf('\n', pos - 1) + 1;
+        const lineEnd = v.indexOf('\n', pos) === -1 ? v.length : v.indexOf('\n', pos);
+        const current = v.slice(lineStart, lineEnd);
+        const emptyLine = current.trim() === '';
+        // 空の行ならその行に、文字がある行ならその下に入れる
+        const prevLine = emptyLine ? v.slice(v.lastIndexOf('\n', lineStart - 2) + 1, Math.max(lineStart - 1, 0)) : current;
+        // 直前が文章なら1行空けて、コマンドのまとまりを見やすくする
+        const gap = lineStart > 0 || !emptyLine ? (prevLine.trim() !== '' && !/^[#＃]/.test(prevLine.trim()) ? '\n' : '') : '';
+        const text = (emptyLine ? '' : '\n') + gap + line + (typeName ? '' : '\n');
+        if (emptyLine) editor.setSelectionRange(lineStart, lineEnd);
+        else editor.setSelectionRange(lineEnd, lineEnd);
+        insertText(text);
+        save();
+        check();
+      }
+
+      /** 元に戻す（Ctrl+Z）が効くように、ブラウザの入力として文字を入れる */
+      function insertText(text) {
+        const ok = document.execCommand && document.execCommand('insertText', false, text);
+        if (!ok) {
+          editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, 'end');
+        }
+      }
+
+      // ---------- かんたんチェック ----------
+      const KNOWN = ['背景', 'キャラ画像', 'キャラ画像左', 'キャラ画像右', '台詞', 'モノローグ', 'スチル', '終了', '表情', 'BGM', 'ＢＧＭ', 'bgm', '効果音'];
+      function check() {
+        const problems = [];
+        const lines = editor.value.split(/\r\n|\r|\n/);
+        lines.forEach((raw, i) => {
+          const t = raw.trim();
+          if (!/^[#＃]/.test(t)) return;
+          const [cmd, ...args] = t.slice(1).split(/[ 　]+/);
+          const arg = args.join(' ');
+          const at = `${i + 1}行目`;
+          if (!KNOWN.includes(cmd)) {
+            problems.push(`${at}：「#${cmd}」は知らないコマンドです（文頭に # を書きたいときは \\# と書きます）`);
+            return;
+          }
+          if (!['モノローグ', '終了'].includes(cmd) && !arg) problems.push(`${at}：#${cmd} の後に名前を書いてください`);
+          if (!storyLoaded || !arg || arg === 'なし') return;
+          const has = (list, name) => list.includes(name);
+          if (cmd.startsWith('キャラ画像') && !has(names.characters, arg)) problems.push(`${at}：キャラ「${arg}」は登録されていません`);
+          if (cmd === '背景' && !has(names.backgrounds, arg)) problems.push(`${at}：背景「${arg}」は登録されていません`);
+          if (cmd === 'スチル' && !has(names.stills, arg)) problems.push(`${at}：スチル「${arg}」は登録されていません`);
+          if (/^(BGM|ＢＧＭ|bgm)$/.test(cmd) && !has(names.bgm, arg)) problems.push(`${at}：BGM「${arg}」は登録されていません`);
+          if (cmd === '効果音' && !has(names.se, arg)) problems.push(`${at}：効果音「${arg}」は登録されていません`);
+          if (cmd === '表情' && args[1] !== 'なし') {
+            if (!has(names.characters, args[0])) problems.push(`${at}：キャラ「${args[0]}」は登録されていません`);
+            else if (!(names.expressions[args[0]] ?? []).includes(args.slice(1).join(' '))) problems.push(`${at}：「${args[0]}」の表情「${args.slice(1).join(' ')}」は登録されていません`);
+          }
+        });
+        document.getElementById('problems').replaceChildren(
+          ...problems.map((p) => Object.assign(document.createElement('li'), { textContent: p })),
+        );
+      }
+
+      // ---------- 作品の読み込み（公開中のサイトから） ----------
+      const storySelect = document.getElementById('story-select');
+      const storyId = document.getElementById('story-id');
+      const status = document.getElementById('story-status');
+      const base = new URL('../stories/', location.href);
+      const getJson = async (path) => {
+        const res = await fetch(new URL(path, base));
+        if (!res.ok || res.headers.get('content-type')?.includes('text/html')) throw new Error(path);
+        return res.json();
+      };
+
+      async function loadCatalog() {
+        try {
+          const catalog = await getJson('catalog.json');
+          for (const id of catalog.stories ?? []) {
+            const opt = new Option(id, id);
+            storySelect.append(opt);
+            getJson(`${id}/info.json`).then((info) => (opt.textContent = `${info.title}（${id}）`)).catch(() => {});
+          }
+        } catch {
+          // ファイルを直接開いた場合など。作品を選ばなくても使える
+          storySelect.disabled = true;
+        }
+      }
+
+      async function loadStory(id) {
+        id = id.trim();
+        if (!id) return;
+        status.textContent = '読み込み中…';
+        try {
+          const [chars, assets] = await Promise.all([getJson(`${id}/characters.json`), getJson(`${id}/assets.json`)]);
+          const list = chars.characters ?? [];
+          names = {
+            characters: list.map((c) => c.name).filter(Boolean),
+            expressions: Object.fromEntries(list.map((c) => [c.name, Object.keys(c.expressions ?? {})]).filter(([, e]) => e.length)),
+            backgrounds: Object.keys(assets.backgrounds ?? {}),
+            stills: Object.keys(assets.stills ?? {}),
+            bgm: Object.keys(assets.bgm ?? {}),
+            se: Object.keys(assets.se ?? {}),
+          };
+          storyLoaded = true;
+          status.textContent = `「${id}」の名前を読み込みました（キャラ ${names.characters.length}・背景 ${names.backgrounds.length}）`;
+          try { localStorage.setItem(STORAGE_KEY + ':story', id); } catch {}
+        } catch {
+          storyLoaded = false;
+          names = { characters: [], expressions: {}, backgrounds: [], stills: [], bgm: [], se: [] };
+          status.textContent = `「${id}」を読み込めませんでした（公開前の作品は、GitHub に保存して数分後に読み込めます）`;
+        }
+        check();
+      }
+
+      storySelect.addEventListener('change', () => {
+        storyId.value = storySelect.value;
+        loadStory(storySelect.value);
+      });
+      document.getElementById('story-load').addEventListener('click', () => loadStory(storyId.value));
+      storyId.addEventListener('keydown', (e) => e.key === 'Enter' && loadStory(storyId.value));
+
+      // ---------- 保存・ファイル ----------
+      const toast = (msg) => {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        setTimeout(() => (t.textContent = ''), 2000);
+      };
+      function save() {
+        try {
+          localStorage.setItem(STORAGE_KEY, editor.value);
+          localStorage.setItem(STORAGE_KEY + ':file', document.getElementById('filename').value);
+        } catch {}
+      }
+      let timer;
+      editor.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { save(); check(); }, 300);
+      });
+
+      document.getElementById('download').addEventListener('click', () => {
+        let name = document.getElementById('filename').value.trim() || 'episode_01.txt';
+        if (!name.endsWith('.txt')) name += '.txt';
+        // 最後は改行で終わらせる。UTF-8 で保存される
+        const text = editor.value.endsWith('\n') ? editor.value : editor.value + '\n';
+        const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+        Object.assign(document.createElement('a'), { href: url, download: name }).click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+      document.getElementById('copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(editor.value);
+        } catch {
+          editor.select();
+          document.execCommand('copy');
+        }
+        toast('コピーしました');
+      });
+      document.getElementById('open').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        editor.value = (await file.text()).replace(/^﻿/, '');
+        document.getElementById('filename').value = file.name;
+        e.target.value = '';
+        save();
+        check();
+        toast(`${file.name} を開きました`);
+      });
+      document.getElementById('clear').addEventListener('click', () => {
+        if (editor.value && !confirm('今の内容を消して、新しく書き始めますか？')) return;
+        editor.value = '';
+        save();
+        check();
+        editor.focus();
+      });
+      document.getElementById('filename').addEventListener('change', save);
+
+      // ---------- 起動 ----------
+      try {
+        editor.value = localStorage.getItem(STORAGE_KEY) ?? '';
+        document.getElementById('filename').value = localStorage.getItem(STORAGE_KEY + ':file') || 'episode_01.txt';
+      } catch {}
+      loadCatalog();
+      try {
+        const last = localStorage.getItem(STORAGE_KEY + ':story');
+        if (last) {
+          storyId.value = last;
+          loadStory(last);
+        }
+      } catch {}
+      check();
+    </script>
+  </body>
+</html>
