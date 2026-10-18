@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes, type Reac
 import type { EpisodeInfo } from '../types';
 import { loadScenarioText, loadStoryResources, type StoryResources } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
+import { collectEpisodeFiles, prefetchAudio, preloadImages } from '../lib/preload';
 import { autoWaitMs, CHAR_INTERVAL_MS, useSettings } from '../lib/settings';
 import { clearResume, getResumeIndex, markCompleted, saveResumeIndex } from '../lib/progress';
 import { playBgm, playSe, resumeAudio, stopBgm } from '../audio/audioManager';
@@ -35,22 +36,34 @@ interface Loaded {
 export default function NovelScreen({ storyId, episode, resume, onExit, onComplete }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
-    Promise.all([loadScenarioText(storyId, episode.file), loadStoryResources(storyId)])
-      .then(([text, resources]) => {
-        const parsed = parseScenario(text);
-        const scenarioErrors: ScenarioError[] = [
-          ...parsed.errors,
-          ...validateScenario(parsed.commands, resources.characters, resources.assets),
-        ].sort((a, b) => a.line - b.line);
-        setLoaded({
-          commands: parsed.commands,
-          resources,
-          problems: [...resources.errors, ...scenarioErrors.map((e) => `${episode.file} ${e.line}行目：${e.message}`)],
-        });
-      })
-      .catch((e: Error) => setFatal(e.message));
+    let cancelled = false;
+    (async () => {
+      const [text, resources] = await Promise.all([loadScenarioText(storyId, episode.file), loadStoryResources(storyId)]);
+      const parsed = parseScenario(text);
+      const scenarioErrors: ScenarioError[] = [
+        ...parsed.errors,
+        ...validateScenario(parsed.commands, resources.characters, resources.assets),
+      ].sort((a, b) => a.line - b.line);
+
+      // 場面が切り替わった瞬間に画像が表示されるよう、使う画像を先にすべて読み込む
+      const files = collectEpisodeFiles(storyId, parsed.commands, resources.characters, resources.assets);
+      prefetchAudio(files.audio);
+      setProgress({ done: 0, total: files.images.length });
+      await preloadImages(files.images, (done) => !cancelled && setProgress({ done, total: files.images.length }));
+
+      if (cancelled) return;
+      setLoaded({
+        commands: parsed.commands,
+        resources,
+        problems: [...resources.errors, ...scenarioErrors.map((e) => `${episode.file} ${e.line}行目：${e.message}`)],
+      });
+    })().catch((e: Error) => !cancelled && setFatal(e.message));
+    return () => {
+      cancelled = true;
+    };
   }, [storyId, episode.file]);
 
   if (fatal) {
@@ -64,7 +77,18 @@ export default function NovelScreen({ storyId, episode, resume, onExit, onComple
       </div>
     );
   }
-  if (!loaded) return <div className="novel-screen" />;
+  if (!loaded) {
+    return (
+      <div className="novel-screen novel-loading">
+        <p>読み込み中…</p>
+        {progress && progress.total > 0 && (
+          <div className="loading-bar">
+            <div style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <NovelPlayer
       {...loaded}
@@ -182,7 +206,7 @@ function NovelPlayer({
     <div className="novel-screen" onClick={handleTap}>
       <div className="novel-background">
         {backgroundFile && (
-          <SafeImage key={backgroundFile} src={storyFileUrl(storyId, `backgrounds/${backgroundFile}`)} alt="" />
+          <SafeImage src={storyFileUrl(storyId, `backgrounds/${backgroundFile}`)} alt="" />
         )}
       </div>
 
@@ -196,7 +220,7 @@ function NovelPlayer({
             const image = characterImage(info, state.expressions[info.name] ?? state.expressions[info.id]);
             return (
               <SafeImage
-                key={`${pos}-${image}`}
+                key={`${pos}-${info.id}`}
                 className={`novel-character pos-${pos}`}
                 style={{
                   height: `${info.height ?? 85}%`,
@@ -211,7 +235,7 @@ function NovelPlayer({
         </div>
       ) : (
         <div className="novel-still">
-          {stillFile && <SafeImage key={stillFile} src={storyFileUrl(storyId, `stills/${stillFile}`)} alt="" />}
+          {stillFile && <SafeImage src={storyFileUrl(storyId, `stills/${stillFile}`)} alt="" />}
         </div>
       )}
 
@@ -290,15 +314,16 @@ function ToolButton({
 
 /** 画像が見つからなくてもクラッシュせず、何も表示しない img */
 function SafeImage(props: ImgHTMLAttributes<HTMLImageElement>) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return null;
+  // 読み込めなかった画像の URL を覚えておく（別の画像に替わったらまた表示する）
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (failedSrc === props.src) return null;
   return (
     <img
       {...props}
       draggable={false}
       onError={() => {
         console.warn(`画像を読み込めませんでした: ${props.src}`);
-        setFailed(true);
+        setFailedSrc(props.src ?? null);
       }}
     />
   );
