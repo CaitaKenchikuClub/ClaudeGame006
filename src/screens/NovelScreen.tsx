@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes } from 'react';
-import type { CharacterInfo } from '../types';
-import { loadStoryResources, type StoryResources } from '../lib/stories';
+import type { EpisodeInfo } from '../types';
+import { loadScenarioText, loadStoryResources, type StoryResources } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
-import { initialNovelState, step, type Position } from '../novel/engine';
-import { getDemoScenario } from '../novel/demoScenario';
+import { initialNovelState, step, type Position, type ScenarioCommand } from '../novel/engine';
+import { parseScenario, type ScenarioError } from '../novel/parser';
+import { findCharacter, validateScenario } from '../novel/validate';
 
 interface Props {
   storyId: string;
+  episode: EpisodeInfo;
   onExit: () => void;
 }
 
@@ -15,20 +17,59 @@ const CHAR_INTERVAL_MS = 40;
 
 const POSITIONS: Position[] = ['left', 'center', 'right'];
 
-export default function NovelScreen({ storyId, onExit }: Props) {
-  const [resources, setResources] = useState<StoryResources | null>(null);
-  const commands = useMemo(() => getDemoScenario(storyId), [storyId]);
+interface Loaded {
+  commands: ScenarioCommand[];
+  resources: StoryResources;
+  /** シナリオや設定の問題（再生は続けられる） */
+  problems: string[];
+}
+
+/** シナリオと設定を読み込んでから再生画面を表示する */
+export default function NovelScreen({ storyId, episode, onExit }: Props) {
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [fatal, setFatal] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([loadScenarioText(storyId, episode.file), loadStoryResources(storyId)])
+      .then(([text, resources]) => {
+        const parsed = parseScenario(text);
+        const scenarioErrors: ScenarioError[] = [
+          ...parsed.errors,
+          ...validateScenario(parsed.commands, resources.characters, resources.assets),
+        ].sort((a, b) => a.line - b.line);
+        setLoaded({
+          commands: parsed.commands,
+          resources,
+          problems: [...resources.errors, ...scenarioErrors.map((e) => `${episode.file} ${e.line}行目：${e.message}`)],
+        });
+      })
+      .catch((e: Error) => setFatal(e.message));
+  }, [storyId, episode.file]);
+
+  if (fatal) {
+    return (
+      <div className="novel-screen novel-fatal">
+        <p>シナリオを読み込めませんでした。</p>
+        <p className="error-box">{fatal}</p>
+        <button className="btn btn-primary" onClick={onExit}>
+          作品一覧へ戻る
+        </button>
+      </div>
+    );
+  }
+  if (!loaded) return <div className="novel-screen" />;
+  return <NovelPlayer storyId={storyId} {...loaded} onExit={onExit} />;
+}
+
+function NovelPlayer({ storyId, commands, resources, problems, onExit }: Loaded & { storyId: string; onExit: () => void }) {
   const [state, setState] = useState(() => step(commands, initialNovelState));
+  const [showProblems, setShowProblems] = useState(true);
 
   // 一文字ずつ表示（サロゲートペアや絵文字が割れないよう Array.from で分割）
   const chars = useMemo(() => Array.from(state.text), [state.text]);
   const [shown, setShown] = useState(0);
   const typing = shown < chars.length;
   const textRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    loadStoryResources(storyId).then(setResources);
-  }, [storyId]);
 
   useEffect(() => {
     setShown(0);
@@ -53,15 +94,13 @@ export default function NovelScreen({ storyId, onExit }: Props) {
   }, [state.ended, onExit]);
 
   const handleTap = () => {
-    if (!resources) return;
     if (typing) setShown(chars.length);
     else setState((s) => step(commands, s));
   };
 
-  const findCharacter = (name: string): CharacterInfo | undefined =>
-    resources?.characters.find((c) => c.name === name || c.id === name);
-
-  const backgroundFile = state.background ? resources?.assets.backgrounds?.[state.background] : undefined;
+  const { characters, assets } = resources;
+  const backgroundFile = state.background ? assets.backgrounds?.[state.background] : undefined;
+  const stillFile = state.still ? assets.stills?.[state.still] : undefined;
 
   return (
     <div className="novel-screen" onClick={handleTap}>
@@ -71,26 +110,33 @@ export default function NovelScreen({ storyId, onExit }: Props) {
         )}
       </div>
 
-      <div className="novel-characters">
-        {POSITIONS.map((pos) => {
-          const name = state.characters[pos];
-          const info = name ? findCharacter(name) : undefined;
-          if (!info) return null;
-          return (
-            <SafeImage
-              key={`${pos}-${info.id}`}
-              className={`novel-character pos-${pos}`}
-              style={{
-                height: `${info.height ?? 85}%`,
-                bottom: `${-(info.offsetY ?? 0)}%`,
-                marginLeft: `${info.offsetX ?? 0}%`,
-              }}
-              src={storyFileUrl(storyId, `characters/${info.image}`)}
-              alt={info.name}
-            />
-          );
-        })}
-      </div>
+      {/* スチル表示中は立ち絵を隠す */}
+      {state.still === null ? (
+        <div className="novel-characters">
+          {POSITIONS.map((pos) => {
+            const name = state.characters[pos];
+            const info = name ? findCharacter(characters, name) : undefined;
+            if (!info) return null;
+            return (
+              <SafeImage
+                key={`${pos}-${info.id}`}
+                className={`novel-character pos-${pos}`}
+                style={{
+                  height: `${info.height ?? 85}%`,
+                  bottom: `${-(info.offsetY ?? 0)}%`,
+                  marginLeft: `${info.offsetX ?? 0}%`,
+                }}
+                src={storyFileUrl(storyId, `characters/${info.image}`)}
+                alt={info.name}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="novel-still">
+          {stillFile && <SafeImage key={stillFile} src={storyFileUrl(storyId, `stills/${stillFile}`)} alt="" />}
+        </div>
+      )}
 
       <button
         className="novel-exit"
@@ -103,11 +149,24 @@ export default function NovelScreen({ storyId, onExit }: Props) {
         ×
       </button>
 
-      {resources && resources.errors.length > 0 && (
-        <div className="novel-errors">
-          {resources.errors.map((m) => (
-            <p key={m}>{m}</p>
-          ))}
+      {problems.length > 0 && (
+        <div
+          className="novel-errors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowProblems((v) => !v);
+          }}
+        >
+          <p className="novel-errors-title">
+            ⚠ シナリオ・設定に {problems.length} 件の問題があります（タップで{showProblems ? '閉じる' : '開く'}）
+          </p>
+          {showProblems && (
+            <ul>
+              {problems.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

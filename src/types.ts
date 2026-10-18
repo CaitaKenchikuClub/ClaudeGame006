@@ -46,4 +46,5 @@ export interface CharactersFile {
 /** 素材の名前とファイル名の対応（public/stories/<作品ID>/assets.json） */
 export interface AssetsFile {
   backgrounds?: Record<string, string>;
+  stills?: Record<string, string>;
 }

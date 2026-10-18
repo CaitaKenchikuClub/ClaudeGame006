@@ -1,9 +1,17 @@
 import type { AssetsFile, Catalog, CharacterInfo, CharactersFile, StoryInfo } from '../types';
 import { storiesUrl, storyFileUrl } from './paths';
 
-async function fetchJson<T>(url: string): Promise<T> {
+async function fetchFile(url: string): Promise<Response> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url} を読み込めませんでした（${res.status}）`);
+  // 開発サーバーは存在しないファイルに対して index.html を返すため、HTML が返ったら「見つからない」扱いにする
+  if (!res.ok || res.headers.get('content-type')?.includes('text/html')) {
+    throw new Error(`${decodeURI(url)} が見つかりません`);
+  }
+  return res;
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetchFile(url);
   try {
     return (await res.json()) as T;
   } catch {
@@ -55,4 +63,10 @@ export async function loadStoryResources(storyId: string): Promise<StoryResource
     assets: assets.status === 'fulfilled' ? assets.value : {},
     errors,
   };
+}
+
+/** シナリオ（.txt）を読み込む */
+export async function loadScenarioText(storyId: string, file: string): Promise<string> {
+  const res = await fetchFile(storyFileUrl(storyId, `scenarios/${file}`));
+  return res.text();
 }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2a6b"/><stop offset="0.55" stop-color="#f08a5d"/><stop offset="1" stop-color="#ffd27a"/></linearGradient></defs>
+  <rect width="900" height="1200" fill="url(#sky)"/>
+  <circle cx="450" cy="760" r="140" fill="#ffefb0"/>
+  <rect y="800" width="900" height="400" fill="#2a1e3a"/>
+  <rect x="300" y="700" width="40" height="100" fill="#2a1e3a"/><circle cx="320" cy="690" r="24" fill="#2a1e3a"/>
+  <rect x="560" y="700" width="40" height="100" fill="#2a1e3a"/><circle cx="580" cy="690" r="24" fill="#2a1e3a"/>
+  <text x="450" y="1050" text-anchor="middle" font-size="44" fill="#f5e6ff" font-family="sans-serif">スチル：夕焼け（仮）</text>
+</svg>

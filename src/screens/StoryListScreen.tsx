@@ -5,7 +5,7 @@ import { storyFileUrl } from '../lib/paths';
 
 interface Props {
   onBack: () => void;
-  onSelect: (storyId: string) => void;
+  onSelect: (story: StoryInfo) => void;
 }
 
 export default function StoryListScreen({ onBack, onSelect }: Props) {
@@ -41,7 +41,7 @@ export default function StoryListScreen({ onBack, onSelect }: Props) {
         ))}
         {stories === null && <p className="loading">読み込み中…</p>}
         {stories?.map((s) => (
-          <button key={s.id} className="story-card" onClick={() => onSelect(s.id)}>
+          <button key={s.id} className="story-card" onClick={() => onSelect(s)}>
             <img
               className="story-cover"
               src={storyFileUrl(s.id, s.cover)}

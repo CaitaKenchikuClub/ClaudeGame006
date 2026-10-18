@@ -195,12 +195,37 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: 56px;
   left: 12px;
   right: 12px;
+  max-height: 40%;
+  overflow-y: auto;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(120, 20, 20, 0.85);
+  background: rgba(120, 20, 20, 0.88);
   font-size: 12px;
+  line-height: 1.6;
 }
-.novel-errors p { margin: 0; }
+.novel-errors-title { margin: 0; font-weight: bold; }
+.novel-errors ul { margin: 6px 0 0; padding-left: 1.2em; }
+
+/* スチル：比率を保ったまま画面に収め、余白は黒 */
+.novel-still {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.novel-still img { width: 100%; height: 100%; object-fit: contain; }
+
+.novel-fatal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  cursor: default;
+}
 
 .message-window {
   position: absolute;
