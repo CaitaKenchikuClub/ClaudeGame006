@@ -1,0 +1,13 @@
+{
+  "id": "novel_XXX",
+  "title": "作品タイトル",
+  "author": "作者名",
+  "cover": "cover.webp",
+  "summary": "作品一覧に表示する短い紹介文（2〜3行程度）",
+  "synopsis": "作品詳細に表示するあらすじ。\n改行したいところには \\n を書きます。",
+  "genre": "ジャンル",
+  "originalUrl": "https://原作掲載ページのURL",
+  "episodes": [
+    { "id": "episode_01", "title": "第1話 タイトル", "file": "episode_01.txt", "order": 1 }
+  ]
+}

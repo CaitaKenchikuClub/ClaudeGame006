@@ -1,0 +1,11 @@
+{
+  "characters": [
+    {
+      "id": "chara_a",
+      "name": "キャラ名",
+      "image": "chara_a.webp",
+      "expressions": {},
+      "height": 85
+    }
+  ]
+}
