@@ -50,6 +50,26 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .game-screen { width: 100%; aspect-ratio: auto; }
 }
 
+/* スマホを横向きにしたときは、縦向きにするよう案内する（PC では表示しない） */
+.rotate-notice { display: none; }
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .game-screen { display: none; }
+  .rotate-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .rotate-notice p { margin: 0; }
+  .rotate-notice p:first-child { font-size: 36px; transform: rotate(-90deg); }
+}
+
+.crash-screen { flex: 1; }
+
 /* ---- 共通ボタン ---- */
 .btn {
   border: none;
@@ -340,8 +360,9 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   left: 10px;
   right: 10px;
   bottom: max(10px, env(safe-area-inset-bottom));
-  height: 28%;
-  min-height: 140px;
+  /* 短い文章は一定の高さ、長い文章は画面の半分弱まで広がり、それ以上はウィンドウ内でスクロール */
+  min-height: max(140px, 26%);
+  max-height: 46%;
   padding: 16px 18px;
   border-radius: 12px;
   background: rgba(10, 12, 20, 0.8);
@@ -363,6 +384,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 }
 .message-text {
   flex: 1;
+  min-height: 0;
   overflow-y: auto; /* 長文でもウィンドウ内に収める */
   font-size: 17px;
   line-height: 1.8;

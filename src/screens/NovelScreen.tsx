@@ -155,10 +155,19 @@ function NovelPlayer({
     // 文章が変わったときだけ表示し直す（途中で速度を変えても最初からやり直さない）
   }, [chars]);
 
-  // 長文のときは表示中の行が見えるよう自動でスクロール
+  // 長文がウィンドウに収まらないとき：新しい文章は先頭から表示し、
+  // 一文字ずつ表示している間だけ、表示中の行が見えるよう下へスクロールする。
+  // （途中タップや「一瞬」で全文を出したときは、読み始めの行が隠れないよう動かさない）
+  const prevShown = useRef(0);
   useEffect(() => {
     const el = textRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el) el.scrollTop = 0;
+    prevShown.current = -1;
+  }, [chars]);
+  useEffect(() => {
+    const el = textRef.current;
+    if (el && shown > 0 && shown === prevShown.current + 1) el.scrollTop = el.scrollHeight;
+    prevShown.current = shown;
   }, [shown]);
 
   // BGM（場面をまたいで流れ続け、エピソードを抜けると止まる）

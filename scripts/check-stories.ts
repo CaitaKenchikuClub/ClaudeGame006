@@ -48,7 +48,8 @@ for (const id of storyIds) {
     const where = `${id}/info.json`;
     if (info.id !== id) report(where, `"id" はフォルダ名と同じ "${id}" にしてください`);
     for (const key of ['title', 'author', 'cover', 'summary', 'synopsis', 'genre', 'originalUrl'] as const) {
-      if (typeof info[key] !== 'string' || info[key] === '') report(where, `"${key}" が書かれていません`);
+      if (info[key] === undefined || info[key] === '') report(where, `"${key}" が書かれていません`);
+      else if (typeof info[key] !== 'string') report(where, `"${key}" は "〜" のように文字で書いてください`);
     }
     if (info.originalUrl && !/^https?:\/\//.test(info.originalUrl)) {
       report(where, '"originalUrl" は https:// から始まるURLを書いてください');

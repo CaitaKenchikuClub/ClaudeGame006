@@ -4,6 +4,7 @@ import StoryListScreen from './screens/StoryListScreen';
 import StoryDetailScreen from './screens/StoryDetailScreen';
 import NovelScreen from './screens/NovelScreen';
 import CompleteScreen from './screens/CompleteScreen';
+import ErrorBoundary from './ErrorBoundary';
 import type { EpisodeInfo, StoryInfo } from './types';
 
 // 画面遷移は URL を変えずに状態で切り替える。
@@ -24,36 +25,50 @@ export default function App() {
   return (
     <div className="app-frame">
       <div className="game-screen">
-        {screen.name === 'title' && <TitleScreen onStart={goList} />}
-        {screen.name === 'list' && (
-          <StoryListScreen
-            onBack={() => setScreen({ name: 'title' })}
-            onSelect={(story) => setScreen({ name: 'detail', story })}
-          />
-        )}
-        {screen.name === 'detail' && (
-          <StoryDetailScreen story={screen.story} onBack={goList} onPlay={(ep, resume) => play(screen.story, ep, resume)} />
-        )}
-        {screen.name === 'novel' && (
-          <NovelScreen
-            // エピソードが変わったら画面を作り直す（次のエピソードへ進むとき用）
-            key={`${screen.story.id}/${screen.episode.id}`}
-            storyId={screen.story.id}
-            episode={screen.episode}
-            resume={screen.resume}
-            onExit={() => setScreen({ name: 'detail', story: screen.story })}
-            onComplete={() => setScreen({ name: 'complete', story: screen.story, episode: screen.episode })}
-          />
-        )}
-        {screen.name === 'complete' && (
-          <CompleteScreen
-            story={screen.story}
-            episode={screen.episode}
-            onPlay={(ep) => play(screen.story, ep)}
-            onDetail={() => setScreen({ name: 'detail', story: screen.story })}
-            onList={goList}
-          />
-        )}
+        <ErrorBoundary onReset={() => setScreen({ name: 'title' })}>
+          {screen.name === 'title' && <TitleScreen onStart={goList} />}
+          {screen.name === 'list' && (
+            <StoryListScreen
+              onBack={() => setScreen({ name: 'title' })}
+              onSelect={(story) => setScreen({ name: 'detail', story })}
+            />
+          )}
+          {screen.name === 'detail' && (
+            <StoryDetailScreen
+              story={screen.story}
+              onBack={goList}
+              onPlay={(ep, resume) => play(screen.story, ep, resume)}
+            />
+          )}
+          {screen.name === 'novel' && (
+            <NovelScreen
+              // エピソードが変わったら画面を作り直す（次のエピソードへ進むとき用）
+              key={`${screen.story.id}/${screen.episode.id}`}
+              storyId={screen.story.id}
+              episode={screen.episode}
+              resume={screen.resume}
+              onExit={() => setScreen({ name: 'detail', story: screen.story })}
+              onComplete={() => setScreen({ name: 'complete', story: screen.story, episode: screen.episode })}
+            />
+          )}
+          {screen.name === 'complete' && (
+            <CompleteScreen
+              story={screen.story}
+              episode={screen.episode}
+              onPlay={(ep) => play(screen.story, ep)}
+              onDetail={() => setScreen({ name: 'detail', story: screen.story })}
+              onList={goList}
+            />
+          )}
+        </ErrorBoundary>
+      </div>
+      <div className="rotate-notice">
+        <p>📱</p>
+        <p>
+          画面を縦向きにして
+          <br />
+          お楽しみください
+        </p>
       </div>
     </div>
   );
