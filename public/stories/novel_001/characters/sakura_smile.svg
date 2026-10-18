@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 1000">
+  <ellipse cx="200" cy="150" rx="95" ry="105" fill="#e88aa0"/>
+  <circle cx="200" cy="165" r="78" fill="#ffe2d0"/>
+  <path d="M160 168 Q172 155 184 168" stroke="#4a2a30" stroke-width="5" fill="none"/><path d="M216 168 Q228 155 240 168" stroke="#4a2a30" stroke-width="5" fill="none"/>
+  <path d="M175 195 Q200 230 225 195 Z" fill="#c0606a"/>
+  <path d="M120 260 L280 260 L310 620 L90 620 Z" fill="#3c4a78"/>
+  <path d="M170 260 L200 330 L230 260 Z" fill="#ffffff"/>
+  <rect x="140" y="620" width="45" height="340" fill="#ffe2d0"/><rect x="215" y="620" width="45" height="340" fill="#ffe2d0"/>
+  <rect x="130" y="950" width="60" height="30" rx="10" fill="#4a3020"/><rect x="210" y="950" width="60" height="30" rx="10" fill="#4a3020"/>
+  <text x="200" y="460" text-anchor="middle" font-size="36" fill="#fff" font-family="sans-serif">サクラ（笑顔）</text>
+</svg>

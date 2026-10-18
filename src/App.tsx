@@ -12,13 +12,14 @@ type Screen =
   | { name: 'title' }
   | { name: 'list' }
   | { name: 'detail'; story: StoryInfo }
-  | { name: 'novel'; story: StoryInfo; episode: EpisodeInfo }
+  | { name: 'novel'; story: StoryInfo; episode: EpisodeInfo; resume: boolean }
   | { name: 'complete'; story: StoryInfo; episode: EpisodeInfo };
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const goList = useCallback(() => setScreen({ name: 'list' }), []);
-  const play = (story: StoryInfo, episode: EpisodeInfo) => setScreen({ name: 'novel', story, episode });
+  const play = (story: StoryInfo, episode: EpisodeInfo, resume = false) =>
+    setScreen({ name: 'novel', story, episode, resume });
 
   return (
     <div className="app-frame">
@@ -31,7 +32,7 @@ export default function App() {
           />
         )}
         {screen.name === 'detail' && (
-          <StoryDetailScreen story={screen.story} onBack={goList} onPlay={(ep) => play(screen.story, ep)} />
+          <StoryDetailScreen story={screen.story} onBack={goList} onPlay={(ep, resume) => play(screen.story, ep, resume)} />
         )}
         {screen.name === 'novel' && (
           <NovelScreen
@@ -39,6 +40,7 @@ export default function App() {
             key={`${screen.story.id}/${screen.episode.id}`}
             storyId={screen.story.id}
             episode={screen.episode}
+            resume={screen.resume}
             onExit={() => setScreen({ name: 'detail', story: screen.story })}
             onComplete={() => setScreen({ name: 'complete', story: screen.story, episode: screen.episode })}
           />

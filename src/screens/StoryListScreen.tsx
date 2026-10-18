@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { StoryInfo } from '../types';
 import { loadStories } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
+import { isCompleted } from '../lib/progress';
 
 interface Props {
   onBack: () => void;
@@ -51,12 +52,27 @@ export default function StoryListScreen({ onBack, onSelect }: Props) {
             <span className="story-meta">
               <span className="story-title">{s.title}</span>
               <span className="story-author">{s.author}</span>
-              <span className="story-genre">{s.genre}</span>
+              <span className="story-tags">
+                <span className="story-genre">{s.genre}</span>
+                <ReadCount story={s} />
+              </span>
               <span className="story-summary">{s.summary}</span>
             </span>
           </button>
         ))}
       </div>
     </div>
+  );
+}
+
+/** 「読了 1/2」のような表示。1話も読んでいなければ何も出さない */
+function ReadCount({ story }: { story: StoryInfo }) {
+  const total = story.episodes?.length ?? 0;
+  const read = (story.episodes ?? []).filter((ep) => isCompleted(story.id, ep.id)).length;
+  if (read === 0) return null;
+  return (
+    <span className="badge">
+      読了 {read}/{total}
+    </span>
   );
 }

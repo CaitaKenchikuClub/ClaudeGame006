@@ -1,6 +1,14 @@
 {
   "characters": [
-    { "id": "sakura", "name": "サクラ", "image": "sakura.svg", "height": 85 },
+    {
+      "id": "sakura",
+      "name": "サクラ",
+      "image": "sakura.svg",
+      "expressions": {
+        "笑顔": "sakura_smile.svg"
+      },
+      "height": 85
+    },
     { "id": "ruri", "name": "ルリ", "image": "ruri.svg", "height": 55 }
   ]
 }

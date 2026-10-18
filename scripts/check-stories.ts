@@ -65,6 +65,9 @@ for (const id of storyIds) {
     if (!c.id || !c.name) report(where, '"id" と "name" を書いてください');
     if (!c.image) report(where, '"image" を書いてください');
     else requireFile(id, 'characters', c.image, where);
+    for (const [expression, file] of Object.entries(c.expressions ?? {})) {
+      requireFile(id, 'characters', file, `${where}の表情「${expression}」`);
+    }
     for (const key of [c.id, c.name]) {
       if (key && seen.has(key)) report(where, `「${key}」が重複しています`);
       if (key) seen.add(key);
@@ -72,7 +75,13 @@ for (const id of storyIds) {
   }
 
   // 素材設定
-  for (const [kind, folder] of [['backgrounds', 'backgrounds'], ['stills', 'stills']] as const) {
+  const assetFolders = [
+    ['backgrounds', 'backgrounds'],
+    ['stills', 'stills'],
+    ['bgm', 'audio'],
+    ['se', 'audio'],
+  ] as const;
+  for (const [kind, folder] of assetFolders) {
     for (const [name, file] of Object.entries(assets[kind] ?? {})) {
       requireFile(id, folder, file, `${id}/assets.json（${kind}「${name}」）`);
     }

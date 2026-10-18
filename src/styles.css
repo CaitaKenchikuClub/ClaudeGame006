@@ -88,6 +88,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 .title-logo { text-align: center; }
 .title-sub { margin: 0 0 8px; color: var(--text-sub); font-size: 14px; letter-spacing: 0.2em; }
 .title-main { margin: 0; font-size: 40px; letter-spacing: 0.15em; }
+.title-buttons { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .title-footer { position: absolute; bottom: 24px; margin: 0; color: var(--text-sub); font-size: 12px; }
 
 /* ---- 共通ヘッダー ---- */
@@ -149,6 +150,15 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 .story-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .story-title { display: block; margin: 0; font-weight: bold; font-size: 16px; }
 .story-author { display: block; margin: 0; font-size: 13px; color: var(--text-sub); }
+.story-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(217, 163, 91, 0.2);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: bold;
+}
 .story-genre {
   align-self: flex-start;
   padding: 2px 8px;
@@ -183,18 +193,23 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 .episode-list { display: flex; flex-direction: column; gap: 8px; }
 .episode-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   padding: 14px 16px;
-  border: none;
   border-radius: 10px;
   background: var(--surface);
-  text-align: left;
   font-size: 15px;
 }
-.episode-item:active { background: var(--surface-2); }
-.episode-play { color: var(--accent); font-size: 12px; }
+.episode-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.episode-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-small {
+  padding: 7px 16px;
+  border: 1px solid var(--surface-2);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+}
+.btn-small.primary { border-color: var(--accent); background: var(--accent); color: #1b1d24; font-weight: bold; }
 .list-body > .btn { margin: 8px 0 16px; }
 
 /* ---- 読了画面 ---- */
@@ -254,18 +269,23 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 .novel-character.pos-center { left: 50%; }
 .novel-character.pos-right { left: 75%; }
 
-.novel-exit {
+.novel-toolbar {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
   right: 10px;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-  font-size: 20px;
-  line-height: 1;
+  display: flex;
+  gap: 6px;
 }
+.tool-button {
+  min-width: 36px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+.tool-button.active { background: var(--accent); color: #1b1d24; font-weight: bold; }
 .novel-errors {
   position: absolute;
   top: 56px;
@@ -345,3 +365,59 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   animation: blink 1s steps(2) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
+
+/* ---- 設定・バックログ（画面全体に重ねる） ---- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  cursor: default;
+}
+.overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--surface-2);
+}
+.overlay-header h2 { margin: 0; font-size: 18px; }
+.btn-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 20px;
+}
+.overlay-body { flex: 1; overflow-y: auto; padding: 16px; }
+.settings { display: flex; flex-direction: column; gap: 16px; }
+.choice { display: flex; gap: 6px; }
+.choice button {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid var(--surface-2);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+}
+.choice button.selected { border-color: var(--accent); background: var(--accent); color: #1b1d24; font-weight: bold; }
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+}
+.setting-row > span:first-child { flex: none; width: 4.5em; }
+.setting-row input[type='range'] { flex: 1; accent-color: var(--accent); }
+.setting-row input[type='checkbox'] { width: 22px; height: 22px; margin-left: auto; accent-color: var(--accent); }
+.setting-row:has(input[type='checkbox']) > span:first-child { width: auto; }
+.volume-value { width: 2.5em; text-align: right; color: var(--text-sub); }
+.backlog { display: flex; flex-direction: column; gap: 14px; }
+.backlog-entry { padding-bottom: 14px; border-bottom: 1px solid var(--surface); }
+.backlog-name { margin: 0 0 4px; color: var(--accent); font-size: 13px; font-weight: bold; }
+.backlog-text { margin: 0; font-size: 15px; line-height: 1.8; white-space: pre-wrap; }

@@ -116,7 +116,8 @@ export function parseScenario(source: string): ParseResult {
         if (args.length < 2) {
           errors.push({ line: lineNo, message: '#表情 の後にキャラ名と表情名を書いてください（例：#表情 サクラ 笑顔）' });
         } else {
-          commands.push({ line: lineNo, type: 'expression', character: args[0], expression: args.slice(1).join(' ') });
+          const expression = args.slice(1).join(' ');
+          commands.push({ line: lineNo, type: 'expression', character: args[0], expression: expression === NONE ? null : expression });
         }
         break;
       case 'BGM':

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseScenario } from '../src/novel/parser.ts';
-import { initialNovelState, step } from '../src/novel/engine.ts';
+import { initialNovelState, restore, step } from '../src/novel/engine.ts';
 import { validateScenario } from '../src/novel/validate.ts';
 
 const strip = (cmds: { line: number }[]) => cmds.map(({ line: _line, ...rest }) => rest);
@@ -109,5 +109,45 @@ test('登録されていないキャラ・背景・スチルを見つける', ()
   assert.deepEqual(
     errors.map((e) => e.line),
     [1, 2, 3],
+  );
+});
+
+test('表情・BGM・効果音を状態に反映する。効果音はその場面だけ鳴る', () => {
+  const { commands } = parseScenario('#BGM 日常\n#効果音 ドア\n#表情 サクラ 笑顔\nA\n#モノローグ\nB\n#表情 サクラ なし\n#BGM なし\nC');
+  const s1 = step(commands, initialNovelState);
+  assert.equal(s1.bgm, '日常');
+  assert.deepEqual(s1.se, ['ドア']);
+  assert.deepEqual(s1.expressions, { サクラ: '笑顔' });
+  const s2 = step(commands, s1);
+  assert.equal(s2.text, 'B');
+  assert.equal(s2.bgm, '日常', 'BGM は場面をまたいで続く');
+  assert.deepEqual(s2.se, []);
+  const s3 = step(commands, s2);
+  assert.equal(s3.bgm, null);
+  assert.deepEqual(s3.expressions, {});
+});
+
+test('途中再開：保存した位置の状態を復元し、位置が合わなければ最初から', () => {
+  const { commands } = parseScenario('#背景 教室\n#BGM 日常\nA\n#効果音 ドア\n#背景 廊下\nB\n#終了');
+  const s2 = step(commands, step(commands, initialNovelState));
+  const restored = restore(commands, s2.index);
+  assert.equal(restored.text, 'B');
+  assert.equal(restored.background, '廊下');
+  assert.equal(restored.bgm, '日常');
+  assert.deepEqual(restored.se, [], '再開時に効果音は鳴らさない');
+  assert.equal(restore(commands, 999).text, 'A');
+  assert.equal(restore(commands, 1).text, 'A');
+});
+
+test('登録されていない表情・BGM・効果音を見つける', () => {
+  const { commands } = parseScenario('#表情 サクラ 泣き\n#表情 ミナ 笑顔\n#BGM 戦闘\n#効果音 爆発\n#表情 サクラ なし');
+  const errors = validateScenario(
+    commands,
+    [{ id: 'sakura', name: 'サクラ', image: 's.png', expressions: { 笑顔: 's2.png' } }],
+    { bgm: { 日常: 'a.mp3' }, se: {} },
+  );
+  assert.deepEqual(
+    errors.map((e) => e.line),
+    [1, 2, 3, 4],
   );
 });

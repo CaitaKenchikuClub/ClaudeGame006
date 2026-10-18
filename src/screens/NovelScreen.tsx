@@ -1,22 +1,26 @@
-import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes } from 'react';
+import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes, type ReactNode } from 'react';
 import type { EpisodeInfo } from '../types';
 import { loadScenarioText, loadStoryResources, type StoryResources } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
-import { initialNovelState, step, type Position, type ScenarioCommand } from '../novel/engine';
+import { autoWaitMs, CHAR_INTERVAL_MS, useSettings } from '../lib/settings';
+import { clearResume, getResumeIndex, markCompleted, saveResumeIndex } from '../lib/progress';
+import { playBgm, playSe, resumeAudio, stopBgm } from '../audio/audioManager';
+import { initialNovelState, restore, step, type Position, type ScenarioCommand } from '../novel/engine';
 import { parseScenario, type ScenarioError } from '../novel/parser';
-import { findCharacter, validateScenario } from '../novel/validate';
+import { characterImage, findCharacter, validateScenario } from '../novel/validate';
+import SettingsPanel from './SettingsPanel';
+import BacklogPanel, { type LogEntry } from './BacklogPanel';
 
 interface Props {
   storyId: string;
   episode: EpisodeInfo;
+  /** true なら前回の続きから再生する */
+  resume?: boolean;
   /** 途中で×ボタンを押したとき */
   onExit: () => void;
   /** 最後まで読んだとき */
   onComplete: () => void;
 }
-
-/** 1文字を表示する間隔（ミリ秒） */
-const CHAR_INTERVAL_MS = 40;
 
 const POSITIONS: Position[] = ['left', 'center', 'right'];
 
@@ -28,7 +32,7 @@ interface Loaded {
 }
 
 /** シナリオと設定を読み込んでから再生画面を表示する */
-export default function NovelScreen({ storyId, episode, onExit, onComplete }: Props) {
+export default function NovelScreen({ storyId, episode, resume, onExit, onComplete }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
 
@@ -61,36 +65,59 @@ export default function NovelScreen({ storyId, episode, onExit, onComplete }: Pr
     );
   }
   if (!loaded) return <div className="novel-screen" />;
-  return <NovelPlayer storyId={storyId} {...loaded} onExit={onExit} onComplete={onComplete} />;
+  return (
+    <NovelPlayer
+      {...loaded}
+      storyId={storyId}
+      episodeId={episode.id}
+      resume={resume}
+      onExit={onExit}
+      onComplete={onComplete}
+    />
+  );
 }
 
 function NovelPlayer({
   storyId,
+  episodeId,
+  resume,
   commands,
   resources,
   problems,
   onExit,
   onComplete,
-}: Loaded & Pick<Props, 'storyId' | 'onExit' | 'onComplete'>) {
-  const [state, setState] = useState(() => step(commands, initialNovelState));
+}: Loaded & Pick<Props, 'storyId' | 'resume' | 'onExit' | 'onComplete'> & { episodeId: string }) {
+  const settings = useSettings();
+  const [state, setState] = useState(() => {
+    const index = resume ? getResumeIndex(storyId, episodeId) : undefined;
+    return index !== undefined ? restore(commands, index) : step(commands, initialNovelState);
+  });
+  const [auto, setAuto] = useState(false);
+  const [panel, setPanel] = useState<'log' | 'settings' | null>(null);
   const [showProblems, setShowProblems] = useState(true);
+  const { characters, assets } = resources;
 
   // 一文字ずつ表示（サロゲートペアや絵文字が割れないよう Array.from で分割）
   const chars = useMemo(() => Array.from(state.text), [state.text]);
   const [shown, setShown] = useState(0);
   const typing = shown < chars.length;
   const textRef = useRef<HTMLDivElement>(null);
+  const interval = CHAR_INTERVAL_MS[settings.textSpeed];
 
   useEffect(() => {
+    if (interval === 0 || chars.length === 0) {
+      setShown(chars.length);
+      return;
+    }
     setShown(0);
-    if (chars.length === 0) return;
     const timer = setInterval(() => {
       setShown((n) => {
         if (n + 1 >= chars.length) clearInterval(timer);
         return n + 1;
       });
-    }, CHAR_INTERVAL_MS);
+    }, interval);
     return () => clearInterval(timer);
+    // 文章が変わったときだけ表示し直す（途中で速度を変えても最初からやり直さない）
   }, [chars]);
 
   // 長文のときは表示中の行が見えるよう自動でスクロール
@@ -99,16 +126,55 @@ function NovelPlayer({
     if (el) el.scrollTop = el.scrollHeight;
   }, [shown]);
 
+  // BGM（場面をまたいで流れ続け、エピソードを抜けると止まる）
+  const bgmFile = state.bgm ? assets.bgm?.[state.bgm] : undefined;
   useEffect(() => {
-    if (state.ended) onComplete();
-  }, [state.ended, onComplete]);
+    playBgm(bgmFile ? storyFileUrl(storyId, `audio/${bgmFile}`) : null);
+  }, [bgmFile, storyId]);
+  useEffect(() => stopBgm, []);
+
+  // 効果音
+  useEffect(() => {
+    for (const name of state.se) {
+      const file = assets.se?.[name];
+      if (file) playSe(storyFileUrl(storyId, `audio/${file}`));
+    }
+  }, [state.se, assets, storyId]);
+
+  // 途中再開の位置を保存し、最後まで読んだら読了として記録する
+  useEffect(() => {
+    if (state.ended) {
+      clearResume(storyId, episodeId);
+      markCompleted(storyId, episodeId);
+      onComplete();
+    } else {
+      saveResumeIndex(storyId, episodeId, state.index);
+    }
+  }, [state, storyId, episodeId, onComplete]);
+
+  const advance = () => setState((s) => step(commands, s));
+
+  // オート再生：全文表示後、文章の長さに応じて待ってから次へ
+  useEffect(() => {
+    if (!auto || typing || panel || state.ended) return;
+    const timer = setTimeout(advance, autoWaitMs(settings.autoSpeed, chars.length));
+    return () => clearTimeout(timer);
+  }, [auto, typing, panel, state, settings.autoSpeed]);
 
   const handleTap = () => {
+    resumeAudio();
     if (typing) setShown(chars.length);
-    else setState((s) => step(commands, s));
+    else advance();
   };
 
-  const { characters, assets } = resources;
+  const backlog: LogEntry[] = useMemo(
+    () =>
+      commands
+        .slice(0, state.index)
+        .flatMap((c) => (c.type === 'text' ? [{ speaker: c.speaker, text: c.text }] : [])),
+    [commands, state.index],
+  );
+
   const backgroundFile = state.background ? assets.backgrounds?.[state.background] : undefined;
   const stillFile = state.still ? assets.stills?.[state.still] : undefined;
 
@@ -127,16 +193,17 @@ function NovelPlayer({
             const name = state.characters[pos];
             const info = name ? findCharacter(characters, name) : undefined;
             if (!info) return null;
+            const image = characterImage(info, state.expressions[info.name] ?? state.expressions[info.id]);
             return (
               <SafeImage
-                key={`${pos}-${info.id}`}
+                key={`${pos}-${image}`}
                 className={`novel-character pos-${pos}`}
                 style={{
                   height: `${info.height ?? 85}%`,
                   bottom: `${-(info.offsetY ?? 0)}%`,
                   marginLeft: `${info.offsetX ?? 0}%`,
                 }}
-                src={storyFileUrl(storyId, `characters/${info.image}`)}
+                src={storyFileUrl(storyId, `characters/${image}`)}
                 alt={info.name}
               />
             );
@@ -148,16 +215,16 @@ function NovelPlayer({
         </div>
       )}
 
-      <button
-        className="novel-exit"
-        aria-label="作品詳細へ戻る"
-        onClick={(e) => {
-          e.stopPropagation();
-          onExit();
-        }}
-      >
-        ×
-      </button>
+      <div className="novel-toolbar">
+        <ToolButton active={auto} onClick={() => setAuto((a) => !a)}>
+          オート
+        </ToolButton>
+        <ToolButton onClick={() => setPanel('log')}>ログ</ToolButton>
+        <ToolButton onClick={() => setPanel('settings')}>設定</ToolButton>
+        <ToolButton onClick={onExit} label="作品詳細へ戻る">
+          ×
+        </ToolButton>
+      </div>
 
       {problems.length > 0 && (
         <div
@@ -184,10 +251,40 @@ function NovelPlayer({
         {state.speaker && <div className="message-name">{state.speaker}</div>}
         <div className="message-text" ref={textRef}>
           {chars.slice(0, shown).join('')}
-          {!typing && chars.length > 0 && <span className="message-next">▼</span>}
+          {!typing && chars.length > 0 && <span className="message-next">{auto ? 'AUTO' : '▼'}</span>}
         </div>
       </div>
+
+      {panel === 'log' && <BacklogPanel entries={backlog} onClose={() => setPanel(null)} />}
+      {panel === 'settings' && <SettingsPanel onClose={() => setPanel(null)} />}
     </div>
+  );
+}
+
+/** ゲーム画面右上の小さなボタン（押しても文章は進まない） */
+function ToolButton({
+  children,
+  onClick,
+  active,
+  label,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  active?: boolean;
+  label?: string;
+}) {
+  return (
+    <button
+      className={`tool-button${active ? ' active' : ''}`}
+      aria-label={label}
+      aria-pressed={active}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      {children}
+    </button>
   );
 }
 

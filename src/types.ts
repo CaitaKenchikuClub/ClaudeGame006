@@ -31,6 +31,8 @@ export interface CharacterInfo {
   name: string;
   /** characters フォルダ内の画像ファイル名（全身・バストアップどちらでも可） */
   image: string;
+  /** 表情名 → characters フォルダ内の画像ファイル名（省略可） */
+  expressions?: Record<string, string>;
   /** 画面の高さに対する立ち絵の高さ（%）。省略時は 85 */
   height?: number;
   /** 右方向へのずらし量（画面の幅に対する%）。マイナスで左へ。省略時は 0 */
@@ -47,4 +49,8 @@ export interface CharactersFile {
 export interface AssetsFile {
   backgrounds?: Record<string, string>;
   stills?: Record<string, string>;
+  /** audio フォルダ内のファイル */
+  bgm?: Record<string, string>;
+  /** audio フォルダ内のファイル */
+  se?: Record<string, string>;
 }

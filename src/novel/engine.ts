@@ -11,8 +11,9 @@ export type ScenarioCommand = { /** シナリオファイルの行番号（エ�
   | { type: 'still'; name: string | null }
   /** speaker が null ならモノローグ（地の文） */
   | { type: 'text'; speaker: string | null; text: string }
-  // 以下は Phase 5 で実装する。今は読み取るだけで何もしない。
-  | { type: 'expression'; character: string; expression: string }
+  /** expression が null なら通常の画像に戻す */
+  | { type: 'expression'; character: string; expression: string | null }
+  /** name が null なら BGM を止める */
   | { type: 'bgm'; name: string | null }
   | { type: 'se'; name: string }
   | { type: 'end' }
@@ -24,6 +25,11 @@ export interface NovelState {
   background: string | null;
   characters: Record<Position, string | null>;
   still: string | null;
+  /** キャラ名 → 表情名 */
+  expressions: Record<string, string>;
+  bgm: string | null;
+  /** 直前の step で鳴らす効果音 */
+  se: string[];
   speaker: string | null;
   text: string;
   ended: boolean;
@@ -34,6 +40,9 @@ export const initialNovelState: NovelState = {
   background: null,
   characters: { left: null, center: null, right: null },
   still: null,
+  expressions: {},
+  bgm: null,
+  se: [],
   speaker: null,
   text: '',
   ended: false,
@@ -41,7 +50,7 @@ export const initialNovelState: NovelState = {
 
 /** 次の文章（またはシナリオの終わり）までコマンドを実行した状態を返す */
 export function step(commands: ScenarioCommand[], state: NovelState): NovelState {
-  const s: NovelState = { ...state, characters: { ...state.characters } };
+  const s: NovelState = { ...state, characters: { ...state.characters }, expressions: { ...state.expressions }, se: [] };
   while (s.index < commands.length) {
     const cmd = commands[s.index++];
     switch (cmd.type) {
@@ -71,11 +80,27 @@ export function step(commands: ScenarioCommand[], state: NovelState): NovelState
         s.ended = true;
         return s;
       case 'expression':
+        if (cmd.expression === null) delete s.expressions[cmd.character];
+        else s.expressions[cmd.character] = cmd.expression;
+        break;
       case 'bgm':
+        s.bgm = cmd.name;
+        break;
       case 'se':
+        s.se.push(cmd.name);
         break;
     }
   }
   s.ended = true;
   return s;
+}
+
+/**
+ * 途中再開用：保存しておいたコマンド番号まで進めた状態を作る。
+ * シナリオが書き換えられて位置が合わない場合は最初から始める。
+ */
+export function restore(commands: ScenarioCommand[], index: number): NovelState {
+  let s = step(commands, initialNovelState);
+  while (!s.ended && s.index < index) s = step(commands, s);
+  return s.ended || s.index !== index ? step(commands, initialNovelState) : { ...s, se: [] };
 }

@@ -5,5 +5,12 @@
   },
   "stills": {
     "夕焼け": "sunset.svg"
+  },
+  "bgm": {
+    "日常": "daily.wav"
+  },
+  "se": {
+    "チャイム": "chime.wav",
+    "ノック": "knock.wav"
   }
 }
