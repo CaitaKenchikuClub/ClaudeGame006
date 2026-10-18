@@ -1,11 +1,14 @@
 import type { AssetsFile, Catalog, CharacterInfo, CharactersFile, EpisodeInfo, StoryInfo } from '../types';
 import { storiesUrl, storyFileUrl } from './paths';
 
+/** ファイルが見つからなかったときのエラー（なくてもよいファイルの判定に使う） */
+class FileNotFoundError extends Error {}
+
 async function fetchFile(url: string): Promise<Response> {
   const res = await fetch(url);
   // 開発サーバーは存在しないファイルに対して index.html を返すため、HTML が返ったら「見つからない」扱いにする
   if (!res.ok || res.headers.get('content-type')?.includes('text/html')) {
-    throw new Error(`${decodeURI(url)} が見つかりません`);
+    throw new FileNotFoundError(`${decodeURI(url)} が見つかりません`);
   }
   return res;
 }
@@ -64,11 +67,22 @@ export interface StoryResources {
   errors: string[];
 }
 
-/** 作品のキャラクター設定と素材設定を読み込む（失敗しても空の設定で続行する） */
+/** なくてもよい JSON を読み込む。ファイルがなければ fallback を返す（書き方の誤りはエラーにする） */
+function fetchOptionalJson<T>(url: string, fallback: T): Promise<T> {
+  return fetchJson<T>(url).catch((e) => {
+    if (e instanceof FileNotFoundError) return fallback;
+    throw e;
+  });
+}
+
+/**
+ * 作品のキャラクター設定と素材設定を読み込む。
+ * どちらもなくてよい（モノローグだけのシナリオなど）。読み込めなくても空の設定で続行する
+ */
 export async function loadStoryResources(storyId: string): Promise<StoryResources> {
   const [chars, assets] = await Promise.allSettled([
-    fetchJson<CharactersFile>(storyFileUrl(storyId, 'characters.json')),
-    fetchJson<AssetsFile>(storyFileUrl(storyId, 'assets.json')),
+    fetchOptionalJson<CharactersFile>(storyFileUrl(storyId, 'characters.json'), { characters: [] }),
+    fetchOptionalJson<AssetsFile>(storyFileUrl(storyId, 'assets.json'), {}),
   ]);
   const errors: string[] = [];
   if (chars.status === 'rejected') errors.push((chars.reason as Error).message);

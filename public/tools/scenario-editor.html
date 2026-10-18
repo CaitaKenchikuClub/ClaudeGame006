@@ -279,7 +279,12 @@
         if (!id) return;
         status.textContent = '読み込み中…';
         try {
-          const [chars, assets] = await Promise.all([getJson(`${id}/characters.json`), getJson(`${id}/assets.json`)]);
+          // characters.json・assets.json はなくてもよいので、片方ずつ読む。info.json で作品があるかを確かめる
+          await getJson(`${id}/info.json`);
+          const [chars, assets] = await Promise.all([
+            getJson(`${id}/characters.json`).catch(() => ({})),
+            getJson(`${id}/assets.json`).catch(() => ({})),
+          ]);
           const list = chars.characters ?? [];
           names = {
             characters: list.map((c) => c.name).filter(Boolean),

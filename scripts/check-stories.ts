@@ -13,9 +13,10 @@ const STORIES_DIR = join(import.meta.dirname, '..', 'public', 'stories');
 const problems: string[] = [];
 const report = (where: string, message: string) => problems.push(`${where}：${message}`);
 
-function readJson<T>(path: string, where: string): T | null {
+/** optional が true のファイルは、なくても問題にしない（書き方の誤りは問題にする） */
+function readJson<T>(path: string, where: string, optional = false): T | null {
   if (!existsSync(path)) {
-    report(where, 'ファイルがありません');
+    if (!optional) report(where, 'ファイルがありません');
     return null;
   }
   try {
@@ -39,8 +40,9 @@ let scenarioCount = 0;
 
 for (const id of storyIds) {
   const info = readJson<StoryInfo>(join(STORIES_DIR, id, 'info.json'), `${id}/info.json`);
-  const chars = readJson<CharactersFile>(join(STORIES_DIR, id, 'characters.json'), `${id}/characters.json`);
-  const assets = readJson<AssetsFile>(join(STORIES_DIR, id, 'assets.json'), `${id}/assets.json`) ?? {};
+  // characters.json と assets.json はなくてもよい（モノローグだけのシナリオなど）
+  const chars = readJson<CharactersFile>(join(STORIES_DIR, id, 'characters.json'), `${id}/characters.json`, true);
+  const assets = readJson<AssetsFile>(join(STORIES_DIR, id, 'assets.json'), `${id}/assets.json`, true) ?? {};
   const characters = Array.isArray(chars?.characters) ? chars.characters : [];
 
   // 作品情報
