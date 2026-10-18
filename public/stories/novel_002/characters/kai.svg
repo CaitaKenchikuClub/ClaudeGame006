@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 1000">
+  <circle cx="200" cy="160" r="80" fill="#f6dcc6"/>
+  <path d="M110 140 Q200 40 290 140 L290 110 Q200 30 110 110 Z" fill="#5a3a22"/>
+  <circle cx="172" cy="170" r="8" fill="#2a1a10"/><circle cx="228" cy="170" r="8" fill="#2a1a10"/>
+  <path d="M110 250 L290 250 L340 900 L60 900 Z" fill="#5b3c8c"/>
+  <path d="M110 250 L290 250 L270 330 L130 330 Z" fill="#7a5ab0"/>
+  <rect x="120" y="900" width="60" height="70" fill="#3a2a20"/><rect x="220" y="900" width="60" height="70" fill="#3a2a20"/>
+  <text x="200" y="560" text-anchor="middle" font-size="36" fill="#fff" font-family="sans-serif">カイ</text>
+</svg>

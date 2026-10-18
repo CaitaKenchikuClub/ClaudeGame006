@@ -1,4 +1,4 @@
-import type { Catalog, StoryInfo } from '../types';
+import type { AssetsFile, Catalog, CharacterInfo, CharactersFile, StoryInfo } from '../types';
 import { storiesUrl, storyFileUrl } from './paths';
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -33,4 +33,26 @@ export async function loadStories(): Promise<StoryLoadResult> {
     else errors.push(`${catalog.stories[i]}: ${(r.reason as Error).message}`);
   });
   return { stories, errors };
+}
+
+export interface StoryResources {
+  characters: CharacterInfo[];
+  assets: AssetsFile;
+  errors: string[];
+}
+
+/** 作品のキャラクター設定と素材設定を読み込む（失敗しても空の設定で続行する） */
+export async function loadStoryResources(storyId: string): Promise<StoryResources> {
+  const [chars, assets] = await Promise.allSettled([
+    fetchJson<CharactersFile>(storyFileUrl(storyId, 'characters.json')),
+    fetchJson<AssetsFile>(storyFileUrl(storyId, 'assets.json')),
+  ]);
+  const errors: string[] = [];
+  if (chars.status === 'rejected') errors.push((chars.reason as Error).message);
+  if (assets.status === 'rejected') errors.push((assets.reason as Error).message);
+  return {
+    characters: chars.status === 'fulfilled' ? (chars.value.characters ?? []) : [],
+    assets: assets.status === 'fulfilled' ? assets.value : {},
+    errors,
+  };
 }

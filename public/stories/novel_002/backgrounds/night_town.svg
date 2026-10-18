@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" preserveAspectRatio="xMidYMid slice">
+  <rect width="900" height="1600" fill="#141a3c"/>
+  <circle cx="120" cy="150" r="5" fill="#fff"/><circle cx="700" cy="120" r="4" fill="#fff"/><circle cx="420" cy="300" r="6" fill="#fff"/><circle cx="800" cy="420" r="4" fill="#fff"/><circle cx="250" cy="520" r="4" fill="#fff"/>
+  <rect x="0" y="1000" width="260" height="600" fill="#2a2440"/><rect x="300" y="900" width="220" height="700" fill="#332b4e"/><rect x="560" y="1050" width="340" height="550" fill="#2a2440"/>
+  <rect x="360" y="980" width="40" height="50" fill="#f4d27a"/><rect x="620" y="1120" width="40" height="50" fill="#f4d27a"/>
+  <text x="450" y="1450" text-anchor="middle" font-size="48" fill="#c8c0f0" font-family="sans-serif">背景：夜の町（仮）</text>
+</svg>

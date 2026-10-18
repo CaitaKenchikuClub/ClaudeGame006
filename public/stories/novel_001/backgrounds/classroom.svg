@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" preserveAspectRatio="xMidYMid slice">
+  <rect width="900" height="1600" fill="#efe4cf"/>
+  <rect y="1150" width="900" height="450" fill="#b98a5a"/>
+  <rect x="80" y="220" width="740" height="560" fill="#bfe2f2" stroke="#8a6a4a" stroke-width="18"/>
+  <line x1="450" y1="220" x2="450" y2="780" stroke="#8a6a4a" stroke-width="14"/>
+  <line x1="80" y1="500" x2="820" y2="500" stroke="#8a6a4a" stroke-width="14"/>
+  <circle cx="680" cy="330" r="50" fill="#fff4b0"/>
+  <rect x="0" y="1080" width="900" height="70" fill="#9c7048"/>
+  <text x="450" y="1450" text-anchor="middle" font-size="48" fill="#5a3a20" font-family="sans-serif">背景：教室（仮）</text>
+</svg>

@@ -118,9 +118,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   gap: 12px;
   padding: 12px;
+  border: none;
   border-radius: 12px;
   background: var(--surface);
+  text-align: left;
 }
+.story-card:active { background: var(--surface-2); }
 .story-cover {
   flex: none;
   width: 90px;
@@ -131,8 +134,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .story-cover.missing { visibility: hidden; }
 .story-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.story-title { margin: 0; font-size: 16px; }
-.story-author { margin: 0; font-size: 13px; color: var(--text-sub); }
+.story-title { display: block; margin: 0; font-weight: bold; font-size: 16px; }
+.story-author { display: block; margin: 0; font-size: 13px; color: var(--text-sub); }
 .story-genre {
   align-self: flex-start;
   padding: 2px 8px;
@@ -141,4 +144,103 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--accent);
   font-size: 11px;
 }
-.story-summary { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
+.story-summary { display: block; margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
+
+/* ---- ノベルゲーム画面 ---- */
+.novel-screen {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #000;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.novel-background,
+.novel-characters {
+  position: absolute;
+  inset: 0;
+}
+.novel-background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 比率を保ったまま画面全体を覆う */
+}
+.novel-character {
+  position: absolute;
+  width: auto; /* 高さだけ指定し、幅は画像の比率に合わせる */
+  max-width: none;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.novel-character.pos-left { left: 25%; }
+.novel-character.pos-center { left: 50%; }
+.novel-character.pos-right { left: 75%; }
+
+.novel-exit {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 20px;
+  line-height: 1;
+}
+.novel-errors {
+  position: absolute;
+  top: 56px;
+  left: 12px;
+  right: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(120, 20, 20, 0.85);
+  font-size: 12px;
+}
+.novel-errors p { margin: 0; }
+
+.message-window {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  height: 28%;
+  min-height: 140px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: rgba(10, 12, 20, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+.message-name {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  transform: translateY(-60%);
+  padding: 4px 16px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #1b1d24;
+  font-weight: bold;
+  font-size: 15px;
+}
+.message-text {
+  flex: 1;
+  overflow-y: auto; /* 長文でもウィンドウ内に収める */
+  font-size: 17px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.message-next {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--accent);
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }

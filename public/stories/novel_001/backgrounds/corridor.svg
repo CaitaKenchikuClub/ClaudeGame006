@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" preserveAspectRatio="xMidYMid slice">
+  <rect width="900" height="1600" fill="#f2c79a"/>
+  <polygon points="0,1600 900,1600 600,900 300,900" fill="#c9a07a"/>
+  <polygon points="0,0 300,900 300,0" fill="#e8b585"/>
+  <polygon points="900,0 600,900 600,0" fill="#dba06c"/>
+  <rect x="300" y="500" width="300" height="400" fill="#ffd9a0"/>
+  <text x="450" y="1450" text-anchor="middle" font-size="48" fill="#5a3a20" font-family="sans-serif">背景：夕方の廊下（仮）</text>
+</svg>

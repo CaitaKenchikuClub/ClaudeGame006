@@ -21,7 +21,8 @@ public/stories/          … 作品データ（ゲーム本体のコードとは
   catalog.json           … 作品一覧（表示する作品IDを並べる）
   novel_001/
     info.json            … 作品情報（タイトル・作者・あらすじ・原作URL・エピソード一覧）
-    characters.json      … キャラクター情報
+    characters.json      … キャラクター情報（表示名・立ち絵画像・大きさ）
+    assets.json          … 背景などの「名前」と「画像ファイル名」の対応
     cover.svg            … 表紙画像
     scenarios/           … シナリオ（日本語テキスト .txt）
     backgrounds/         … 背景画像
@@ -40,6 +41,38 @@ src/                     … ゲーム本体
 4. `public/stories/catalog.json` の `stories` に作品ID を追加する
 
 ゲーム本体のソースコードを編集する必要はありません。
+
+### characters.json の書き方
+
+```json
+{
+  "characters": [
+    { "id": "sakura", "name": "サクラ", "image": "sakura.png", "height": 85 },
+    { "id": "ruri", "name": "ルリ", "image": "ruri_bust.png", "height": 55 }
+  ]
+}
+```
+
+| 項目 | 内容 |
+|---|---|
+| `id` | 半角英数字の識別名 |
+| `name` | シナリオで書く名前（例：`#キャラ画像 サクラ`） |
+| `image` | `characters` フォルダに入れた画像ファイル名（全身・バストアップどちらでも可。透過PNG/WebP推奨） |
+| `height` | 画面の高さに対する立ち絵の高さ（%）。省略すると 85。全身なら 80〜90、バストアップなら 50〜60 が目安 |
+| `offsetX` / `offsetY` | 位置の微調整（%）。省略可。`offsetX` はプラスで右、`offsetY` はプラスで下へずれる |
+
+### assets.json の書き方
+
+```json
+{
+  "backgrounds": {
+    "教室": "classroom.png",
+    "廊下": "corridor.png"
+  }
+}
+```
+
+左がシナリオで書く名前（例：`#背景 教室`）、右が `backgrounds` フォルダに入れたファイル名です。
 （シナリオ記法の詳しい説明は今後のフェーズで追加します）
 
 ## GitHub Pages の公開設定（最初に1回だけ）

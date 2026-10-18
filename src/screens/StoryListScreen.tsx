@@ -5,9 +5,10 @@ import { storyFileUrl } from '../lib/paths';
 
 interface Props {
   onBack: () => void;
+  onSelect: (storyId: string) => void;
 }
 
-export default function StoryListScreen({ onBack }: Props) {
+export default function StoryListScreen({ onBack, onSelect }: Props) {
   const [stories, setStories] = useState<StoryInfo[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -40,20 +41,20 @@ export default function StoryListScreen({ onBack }: Props) {
         ))}
         {stories === null && <p className="loading">読み込み中…</p>}
         {stories?.map((s) => (
-          <article key={s.id} className="story-card">
+          <button key={s.id} className="story-card" onClick={() => onSelect(s.id)}>
             <img
               className="story-cover"
               src={storyFileUrl(s.id, s.cover)}
               alt={`${s.title} 表紙`}
               onError={(e) => e.currentTarget.classList.add('missing')}
             />
-            <div className="story-meta">
-              <h3 className="story-title">{s.title}</h3>
-              <p className="story-author">{s.author}</p>
+            <span className="story-meta">
+              <span className="story-title">{s.title}</span>
+              <span className="story-author">{s.author}</span>
               <span className="story-genre">{s.genre}</span>
-              <p className="story-summary">{s.summary}</p>
-            </div>
-          </article>
+              <span className="story-summary">{s.summary}</span>
+            </span>
+          </button>
         ))}
       </div>
     </div>

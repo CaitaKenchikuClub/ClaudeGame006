@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 700">
+  <ellipse cx="300" cy="230" rx="160" ry="180" fill="#3a4a8a"/>
+  <rect x="140" y="230" width="320" height="250" fill="#3a4a8a"/>
+  <circle cx="300" cy="250" r="125" fill="#fde6d6"/>
+  <circle cx="255" cy="255" r="12" fill="#2a3060"/><circle cx="345" cy="255" r="12" fill="#2a3060"/>
+  <path d="M275 310 L325 310" stroke="#b05060" stroke-width="6"/>
+  <path d="M60 700 Q60 440 300 430 Q540 440 540 700 Z" fill="#2c3550"/>
+  <path d="M250 430 L300 520 L350 430 Z" fill="#ffffff"/>
+  <text x="300" y="640" text-anchor="middle" font-size="44" fill="#fff" font-family="sans-serif">ルリ（バストアップ）</text>
+</svg>

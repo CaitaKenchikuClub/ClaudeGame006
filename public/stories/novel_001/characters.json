@@ -1,6 +1,6 @@
 {
   "characters": [
-    { "id": "sakura", "name": "サクラ" },
-    { "id": "ruri", "name": "ルリ" }
+    { "id": "sakura", "name": "サクラ", "image": "sakura.svg", "height": 85 },
+    { "id": "ruri", "name": "ルリ", "image": "ruri.svg", "height": 55 }
   ]
 }
