@@ -9,7 +9,8 @@
     "build": "npm run check && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "node --test scripts/*.test.ts"
+    "test": "node --test scripts/*.test.ts",
+    "new-story": "node scripts/create-story.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

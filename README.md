@@ -15,7 +15,7 @@ React + TypeScript + Vite で作成し、GitHub Pages で公開しています�
 | [シナリオの書き方](docs/シナリオの書き方.md) | シナリオ（.txt）のコマンド一覧、文章のルール、エラーの直し方 |
 | [キャラ画像の作り方（ChatGPT）](docs/キャラ画像の作り方（ChatGPT）.md) | キャラクターシートから全身の立ち絵とバストアップを作るプロンプト、仕上げ方、登録のしかた |
 
-新しい作品は `templates/story_template`（中身が空のひな形）をコピーして作れます。ゲーム本体のプログラムを編集する必要はありません。
+新しい作品フォルダは、**Actions タブの「新しい作品フォルダを作る」** で作品ID を入力するだけで作れます（`templates/story_template` の中身が空のひな形がコピーされます）。ゲーム本体のプログラムを編集する必要はありません。
 
 設定ファイル（JSON）は **[設定ファイル作成ツール](https://caitakenchikuclub.github.io/ClaudeGame006/tools/json-generator.html)** で、入力欄に書くだけで作れます（コピー・ダウンロード・既存ファイルの読み込みに対応）。
 
@@ -30,7 +30,7 @@ templates/story_template … 新しい作品のひな形（設定ファイルの
 docs/                    … 説明書
 src/                     … ゲーム本体
 scripts/                 … 公開前チェックとテスト
-.github/workflows/       … GitHub Pages への自動公開設定
+.github/workflows/       … GitHub Pages への自動公開、作品フォルダ作成ボタン
 ```
 
 ## 開発コマンド
@@ -39,6 +39,7 @@ scripts/                 … 公開前チェックとテスト
 npm install      # 初回のみ
 npm run dev      # 開発サーバー起動（表示されたURLをブラウザで開く）
 npm run check    # 全作品のシナリオ・設定・素材をチェック
+npm run new-story -- 作品ID   # 新しい作品フォルダを作る
 npm test         # シナリオ読み取り機能のテスト
 npm run build    # チェック＋本番ビルド（dist/ に出力）
 npm run preview  # ビルド結果の確認

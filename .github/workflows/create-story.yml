@@ -1,0 +1,70 @@
+name: 新しい作品フォルダを作る
+
+# Actions タブから手動で実行する。
+# templates/story_template を public/stories/<作品ID> にコピーして保存する。
+on:
+  workflow_dispatch:
+    inputs:
+      story_id:
+        description: '作品ID（フォルダ名になります。半角英数字と _　例：ningyo_to_hime）'
+        required: true
+        type: string
+      title:
+        description: '作品タイトル（空のままでも可。あとで info.json に書けます）'
+        required: false
+        type: string
+      author:
+        description: '作者名（空のままでも可）'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: create-story
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 入力値は環境変数で渡し、スクリプトの中で確認する（シェルに直接埋め込まない）
+      - name: 作品フォルダを作る
+        id: create
+        env:
+          STORY_ID: ${{ inputs.story_id }}
+          STORY_TITLE: ${{ inputs.title }}
+          STORY_AUTHOR: ${{ inputs.author }}
+        run: node scripts/create-story.ts
+
+      - name: GitHub に保存する
+        env:
+          STORY_ID: ${{ steps.create.outputs.id }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "public/stories/$STORY_ID"
+          git commit -m "作品フォルダ $STORY_ID を追加"
+          git pull --rebase origin "$BRANCH"
+          git push origin "HEAD:$BRANCH"
+
+      - name: 次にやること
+        env:
+          STORY_ID: ${{ steps.create.outputs.id }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<SUMMARY
+          ## ✔ public/stories/$STORY_ID を作りました
+
+          次にやること：
+          1. info.json・characters.json・assets.json を書く（設定ファイル作成ツールが使えます）
+          2. 画像・音声を backgrounds / characters / stills / audio フォルダに入れる
+          3. scenarios/episode_01.txt にシナリオを書く
+          4. できあがったら public/stories/catalog.json に「$STORY_ID」を追加する（ここで初めてゲームに表示されます）
+          SUMMARY
