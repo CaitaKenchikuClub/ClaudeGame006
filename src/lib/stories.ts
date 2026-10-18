@@ -1,4 +1,4 @@
-import type { AssetsFile, Catalog, CharacterInfo, CharactersFile, StoryInfo } from '../types';
+import type { AssetsFile, Catalog, CharacterInfo, CharactersFile, EpisodeInfo, StoryInfo } from '../types';
 import { storiesUrl, storyFileUrl } from './paths';
 
 async function fetchFile(url: string): Promise<Response> {
@@ -25,8 +25,23 @@ export interface StoryLoadResult {
   errors: string[];
 }
 
-/** catalog.json に登録された作品の info.json をすべて読み込む */
-export async function loadStories(): Promise<StoryLoadResult> {
+let storiesCache: Promise<StoryLoadResult> | null = null;
+
+/** catalog.json に登録された作品の info.json をすべて読み込む（2回目以降は前回の結果を使う） */
+export function loadStories(): Promise<StoryLoadResult> {
+  storiesCache ??= fetchStories().catch((e) => {
+    storiesCache = null; // 失敗したときは次回もう一度読み込む
+    throw e;
+  });
+  return storiesCache;
+}
+
+/** エピソードを表示順に並べる */
+export function sortedEpisodes(story: StoryInfo): EpisodeInfo[] {
+  return [...(story.episodes ?? [])].sort((a, b) => a.order - b.order);
+}
+
+async function fetchStories(): Promise<StoryLoadResult> {
   const catalog = await fetchJson<Catalog>(storiesUrl('catalog.json'));
   if (!Array.isArray(catalog.stories)) {
     throw new Error('catalog.json に "stories" の一覧がありません');

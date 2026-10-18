@@ -48,6 +48,34 @@ scripts/                 … 公開前チェックとテスト
 
 ゲーム本体のソースコードを編集する必要はありません。
 
+### info.json の書き方
+
+```json
+{
+  "id": "novel_001",
+  "title": "作品タイトル",
+  "author": "作者名",
+  "cover": "cover.png",
+  "summary": "作品一覧に表示する短い紹介文",
+  "synopsis": "作品詳細に表示するあらすじ（\n で改行）",
+  "genre": "青春・日常",
+  "originalUrl": "https://原作掲載ページのURL",
+  "episodes": [
+    { "id": "episode_01", "title": "第1話 タイトル", "file": "episode_01.txt", "order": 1 },
+    { "id": "episode_02", "title": "第2話 タイトル", "file": "episode_02.txt", "order": 2 }
+  ]
+}
+```
+
+| 項目 | 内容 |
+|---|---|
+| `id` | フォルダ名と同じにする |
+| `cover` | 作品フォルダに入れた表紙画像のファイル名（縦長 5:7 程度がきれいに表示されます） |
+| `originalUrl` | 「原作を読む」「原作の続きを読む」ボタンのリンク先 |
+| `episodes` | エピソード一覧。`file` は `scenarios` フォルダ内のシナリオファイル名、`order` は表示順（小さい順） |
+
+**エピソードを追加するとき**は、`scenarios` フォルダにシナリオ（.txt）を入れ、`episodes` に1行追加するだけです。
+
 ### characters.json の書き方
 
 ```json

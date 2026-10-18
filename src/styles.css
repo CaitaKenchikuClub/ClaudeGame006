@@ -60,6 +60,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .btn-primary { background: var(--accent); color: #1b1d24; font-weight: bold; }
 .btn-primary:active { filter: brightness(0.9); }
+/* リンク（a タグ）もボタンと同じ見た目にする */
+a.btn { display: block; text-align: center; text-decoration: none; }
+.btn-secondary { background: var(--accent); color: #1b1d24; font-weight: bold; font-size: 16px; padding: 14px 24px; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  padding: 12px 20px;
+  letter-spacing: 0.05em;
+}
+.btn-outline:active { background: var(--surface); }
+.btn-text { background: transparent; color: var(--text-sub); font-size: 14px; padding: 10px; letter-spacing: 0.05em; }
 
 /* ---- タイトル画面 ---- */
 .title-screen {
@@ -145,6 +158,69 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: 11px;
 }
 .story-summary { display: block; margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
+
+/* ---- 作品詳細 ---- */
+.detail-head { display: flex; gap: 14px; }
+.detail-cover {
+  flex: none;
+  width: 120px;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.detail-cover.missing { visibility: hidden; }
+.detail-meta { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.detail-title { margin: 0; font-size: 19px; line-height: 1.4; }
+.section-title {
+  margin: 8px 0 8px;
+  padding-left: 8px;
+  border-left: 3px solid var(--accent);
+  font-size: 14px;
+  color: var(--text-sub);
+}
+.detail-synopsis { margin: 0; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.episode-list { display: flex; flex-direction: column; gap: 8px; }
+.episode-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+  font-size: 15px;
+}
+.episode-item:active { background: var(--surface-2); }
+.episode-play { color: var(--accent); font-size: 12px; }
+.list-body > .btn { margin: 8px 0 16px; }
+
+/* ---- 読了画面 ---- */
+.complete-screen {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 24px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 20%, #2f3340 0%, var(--bg) 70%);
+}
+.complete-cover {
+  width: 110px;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.complete-cover.missing { visibility: hidden; }
+.complete-label { margin: 24px 0 4px; color: var(--accent); font-size: 13px; letter-spacing: 0.4em; }
+.complete-title { margin: 0; font-size: 20px; line-height: 1.5; }
+.complete-story { margin: 6px 0 0; color: var(--text-sub); font-size: 13px; }
+.complete-message { margin: 20px 0 28px; font-size: 14px; line-height: 1.8; }
+.complete-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 
 /* ---- ノベルゲーム画面 ---- */
 .novel-screen {

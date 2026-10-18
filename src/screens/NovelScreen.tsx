@@ -9,7 +9,10 @@ import { findCharacter, validateScenario } from '../novel/validate';
 interface Props {
   storyId: string;
   episode: EpisodeInfo;
+  /** 途中で×ボタンを押したとき */
   onExit: () => void;
+  /** 最後まで読んだとき */
+  onComplete: () => void;
 }
 
 /** 1文字を表示する間隔（ミリ秒） */
@@ -25,7 +28,7 @@ interface Loaded {
 }
 
 /** シナリオと設定を読み込んでから再生画面を表示する */
-export default function NovelScreen({ storyId, episode, onExit }: Props) {
+export default function NovelScreen({ storyId, episode, onExit, onComplete }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
 
@@ -52,16 +55,23 @@ export default function NovelScreen({ storyId, episode, onExit }: Props) {
         <p>シナリオを読み込めませんでした。</p>
         <p className="error-box">{fatal}</p>
         <button className="btn btn-primary" onClick={onExit}>
-          作品一覧へ戻る
+          戻る
         </button>
       </div>
     );
   }
   if (!loaded) return <div className="novel-screen" />;
-  return <NovelPlayer storyId={storyId} {...loaded} onExit={onExit} />;
+  return <NovelPlayer storyId={storyId} {...loaded} onExit={onExit} onComplete={onComplete} />;
 }
 
-function NovelPlayer({ storyId, commands, resources, problems, onExit }: Loaded & { storyId: string; onExit: () => void }) {
+function NovelPlayer({
+  storyId,
+  commands,
+  resources,
+  problems,
+  onExit,
+  onComplete,
+}: Loaded & Pick<Props, 'storyId' | 'onExit' | 'onComplete'>) {
   const [state, setState] = useState(() => step(commands, initialNovelState));
   const [showProblems, setShowProblems] = useState(true);
 
@@ -90,8 +100,8 @@ function NovelPlayer({ storyId, commands, resources, problems, onExit }: Loaded 
   }, [shown]);
 
   useEffect(() => {
-    if (state.ended) onExit();
-  }, [state.ended, onExit]);
+    if (state.ended) onComplete();
+  }, [state.ended, onComplete]);
 
   const handleTap = () => {
     if (typing) setShown(chars.length);
@@ -140,7 +150,7 @@ function NovelPlayer({ storyId, commands, resources, problems, onExit }: Loaded 
 
       <button
         className="novel-exit"
-        aria-label="作品一覧へ戻る"
+        aria-label="作品詳細へ戻る"
         onClick={(e) => {
           e.stopPropagation();
           onExit();

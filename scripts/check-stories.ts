@@ -50,6 +50,9 @@ for (const id of storyIds) {
     for (const key of ['title', 'author', 'cover', 'summary', 'synopsis', 'genre', 'originalUrl'] as const) {
       if (typeof info[key] !== 'string' || info[key] === '') report(where, `"${key}" が書かれていません`);
     }
+    if (info.originalUrl && !/^https?:\/\//.test(info.originalUrl)) {
+      report(where, '"originalUrl" は https:// から始まるURLを書いてください');
+    }
     if (info.cover) requireFile(id, '', info.cover, where);
     if (!Array.isArray(info.episodes) || info.episodes.length === 0) report(where, '"episodes" にエピソードがありません');
   }
