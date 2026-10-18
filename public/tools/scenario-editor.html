@@ -103,16 +103,17 @@
       const STORAGE_KEY = 'novel-collab-scenario-editor';
 
       // 作品を読み込むと、登録済みの名前がここに入る
-      let names = { characters: [], expressions: {}, backgrounds: [], stills: [], bgm: [], se: [] };
+      const emptyNames = () => ({ characters: [], fullBody: [], expressions: {}, backgrounds: [], stills: [], bgm: [], se: [] });
+      let names = emptyNames();
       let storyLoaded = false;
 
       // ---------- コマンドのボタン ----------
       // kind：名前の候補の種類。line：入れる文字。none：「なし」も候補に出す
       const COMMANDS = [
         { label: '背景', kind: 'backgrounds', line: (n) => `#背景 ${n}` },
-        { label: 'キャラ（中央）', kind: 'characters', line: (n) => `#キャラ画像 ${n}` },
-        { label: 'キャラ（左）', kind: 'characters', line: (n) => `#キャラ画像左 ${n}`, none: true },
-        { label: 'キャラ（右）', kind: 'characters', line: (n) => `#キャラ画像右 ${n}`, none: true },
+        { label: 'キャラ（中央）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像 ${n}` },
+        { label: 'キャラ（左）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像左 ${n}`, none: true },
+        { label: 'キャラ（右）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像右 ${n}`, none: true },
         { label: 'キャラを全部消す', line: () => '#キャラ画像 なし' },
         { label: '台詞', kind: 'characters', line: (n) => `#台詞 ${n}` },
         { label: 'モノローグ', line: () => '#モノローグ' },
@@ -142,7 +143,12 @@
         const options =
           cmd.kind === 'expressions'
             ? Object.entries(names.expressions).flatMap(([c, list]) => list.map((e) => `${c} ${e}`)).concat(names.characters.map((c) => `${c} なし`))
-            : [...names[cmd.kind], ...(cmd.none ? ['なし'] : [])];
+            : [
+                ...names[cmd.kind],
+                // 全身の画像があるキャラは「キャラ名 全身」も選べる
+                ...(cmd.withFull ? names.fullBody.map((n) => `${n} 全身`) : []),
+                ...(cmd.none ? ['なし'] : []),
+              ];
         if (!storyLoaded || options.length === 0) {
           // 候補がないときは、名前の手前までを入れて続きを手で書いてもらう
           closePicker();
@@ -234,7 +240,12 @@
           if (!['モノローグ', '終了'].includes(cmd) && !arg) problems.push(`${at}：#${cmd} の後に名前を書いてください`);
           if (!storyLoaded || !arg || arg === 'なし') return;
           const has = (list, name) => list.includes(name);
-          if (cmd.startsWith('キャラ画像') && !has(names.characters, arg)) problems.push(`${at}：キャラ「${arg}」は登録されていません`);
+          if (cmd.startsWith('キャラ画像')) {
+            const full = args.length >= 2 && args[args.length - 1] === '全身';
+            const name = full ? args.slice(0, -1).join(' ') : arg;
+            if (!has(names.characters, name)) problems.push(`${at}：キャラ「${name}」は登録されていません`);
+            else if (full && !has(names.fullBody, name)) problems.push(`${at}：キャラ「${name}」の全身の画像は登録されていません`);
+          }
           if (cmd === '背景' && !has(names.backgrounds, arg)) problems.push(`${at}：背景「${arg}」は登録されていません`);
           if (cmd === 'スチル' && !has(names.stills, arg)) problems.push(`${at}：スチル「${arg}」は登録されていません`);
           if (/^(BGM|ＢＧＭ|bgm)$/.test(cmd) && !has(names.bgm, arg)) problems.push(`${at}：BGM「${arg}」は登録されていません`);
@@ -289,6 +300,7 @@
           const list = chars.characters ?? [];
           names = {
             characters: list.map((c) => c.name).filter(Boolean),
+            fullBody: list.filter((c) => c.full).map((c) => c.name).filter(Boolean),
             expressions: Object.fromEntries(list.map((c) => [c.name, Object.keys(c.expressions ?? {})]).filter(([, e]) => e.length)),
             backgrounds: Object.keys(assets.backgrounds ?? {}),
             stills: Object.keys(assets.stills ?? {}),
@@ -300,7 +312,7 @@
           try { localStorage.setItem(STORAGE_KEY + ':story', id); } catch {}
         } catch {
           storyLoaded = false;
-          names = { characters: [], expressions: {}, backgrounds: [], stills: [], bgm: [], se: [] };
+          names = emptyNames();
           status.textContent = `「${id}」を読み込めませんでした（公開前の作品は、GitHub に保存して数分後に読み込めます）`;
         }
         check();

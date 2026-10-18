@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseScenario } from '../src/novel/parser.ts';
 import { initialNovelState, restore, step } from '../src/novel/engine.ts';
-import { validateScenario } from '../src/novel/validate.ts';
+import { characterDisplay, displayInState, validateScenario } from '../src/novel/validate.ts';
 
 const strip = (cmds: { line: number }[]) => cmds.map(({ line: _line, ...rest }) => rest);
 
@@ -150,4 +150,50 @@ test('登録されていない表情・BGM・効果音を見つける', () => {
     errors.map((e) => e.line),
     [1, 2, 3, 4],
   );
+});
+
+test('「#キャラ画像 キャラ名 全身」で全身、名前だけでバストアップに戻る', () => {
+  const { commands, errors } = parseScenario('#キャラ画像右 キウイ 全身\nA\n#キャラ画像右 キウイ\n#モノローグ\nB\n#キャラ画像左 キウイ　全身\n#モノローグ\nC');
+  assert.deepEqual(errors, []);
+  assert.deepEqual(strip(commands)[0], { type: 'character', position: 'right', name: 'キウイ', full: true });
+  const s1 = step(commands, initialNovelState);
+  assert.deepEqual(s1.characters, { left: null, center: null, right: 'キウイ' });
+  assert.equal(s1.fullBody['キウイ'], true);
+  const s2 = step(commands, s1);
+  assert.equal(s2.fullBody['キウイ'], false);
+  const s3 = step(commands, s2);
+  assert.deepEqual(s3.characters, { left: 'キウイ', center: null, right: null }, '全身でも同じキャラは移動扱い');
+  assert.equal(s3.fullBody['キウイ'], true);
+});
+
+test('立ち絵の画像と大きさ：何も書かなければバストアップ75・全身85', () => {
+  const kiwi = { id: 'kiwi', name: 'キウイ', image: 'kiwi_bust.webp', full: 'kiwi.webp', expressions: { 笑顔: 'kiwi_smile.webp' } };
+  assert.deepEqual(characterDisplay(kiwi, false, undefined), { image: 'kiwi_bust.webp', height: 75, offsetX: 0, offsetY: 0 });
+  assert.deepEqual(characterDisplay(kiwi, true, undefined), { image: 'kiwi.webp', height: 85, offsetX: 0, offsetY: 0 });
+  assert.equal(characterDisplay(kiwi, false, '笑顔').image, 'kiwi_smile.webp');
+  assert.equal(characterDisplay(kiwi, true, '笑顔').image, 'kiwi.webp', '全身には表情を反映しない');
+  // 全身だけのキャラは、名前だけでも全身を出す
+  assert.deepEqual(characterDisplay({ id: 'a', name: 'A', full: 'a.webp' }, false, undefined), { image: 'a.webp', height: 85, offsetX: 0, offsetY: 0 });
+  // 大きさ・位置を書いた場合はそれを使う
+  const custom = { id: 'b', name: 'B', image: 'b.webp', height: 60, offsetY: -5, full: { image: 'b_full.webp', height: 90 } };
+  assert.deepEqual(characterDisplay(custom, false, undefined), { image: 'b.webp', height: 60, offsetX: 0, offsetY: -5 });
+  assert.deepEqual(characterDisplay(custom, true, undefined), { image: 'b_full.webp', height: 90, offsetX: 0, offsetY: 0 });
+  // 場面の状態から決める
+  const { commands } = parseScenario('#キャラ画像 キウイ 全身\n#表情 キウイ 笑顔\nA');
+  const s = step(commands, initialNovelState);
+  assert.equal(displayInState(s, 'キウイ', kiwi).image, 'kiwi.webp');
+});
+
+test('全身の画像が登録されていないキャラに「全身」を付けると知らせる', () => {
+  const { commands } = parseScenario('#キャラ画像 サクラ 全身\n#キャラ画像 キウイ 全身\nA');
+  const errors = validateScenario(
+    commands,
+    [
+      { id: 'sakura', name: 'サクラ', image: 's.webp' },
+      { id: 'kiwi', name: 'キウイ', image: 'k.webp', full: 'kf.webp' },
+    ],
+    {},
+  );
+  assert.deepEqual(errors.map((e) => e.line), [1]);
+  assert.match(errors[0].message, /全身の画像/);
 });

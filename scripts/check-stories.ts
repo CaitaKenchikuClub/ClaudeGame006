@@ -5,7 +5,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseScenario } from '../src/novel/parser.ts';
-import { validateScenario } from '../src/novel/validate.ts';
+import { fullBodyImage, validateScenario } from '../src/novel/validate.ts';
 import type { AssetsFile, Catalog, CharactersFile, StoryInfo } from '../src/types.ts';
 
 const STORIES_DIR = join(import.meta.dirname, '..', 'public', 'stories');
@@ -66,8 +66,11 @@ for (const id of storyIds) {
   for (const c of characters) {
     const where = `${id}/characters.json（${c.name ?? c.id ?? '名前なし'}）`;
     if (!c.id || !c.name) report(where, '"id" と "name" を書いてください');
-    if (!c.image) report(where, '"image" を書いてください');
-    else requireFile(id, 'characters', c.image, where);
+    const full = fullBodyImage(c);
+    if (!c.image && !full) report(where, '"image"（バストアップ）か "full"（全身）の画像を書いてください');
+    if (c.image) requireFile(id, 'characters', c.image, where);
+    if (full) requireFile(id, 'characters', full, `${where}の全身`);
+    if (c.full !== undefined && !full) report(where, '"full" には全身の画像ファイル名を書いてください');
     for (const [expression, file] of Object.entries(c.expressions ?? {})) {
       requireFile(id, 'characters', file, `${where}の表情「${expression}」`);
     }

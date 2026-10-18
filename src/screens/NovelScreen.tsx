@@ -8,7 +8,7 @@ import { clearResume, getResumeIndex, markCompleted, saveResumeIndex } from '../
 import { playBgm, playSe, resumeAudio, stopBgm } from '../audio/audioManager';
 import { initialNovelState, restore, step, type NovelState, type Position, type ScenarioCommand } from '../novel/engine';
 import { parseScenario, type ScenarioError } from '../novel/parser';
-import { characterImage, findCharacter, validateScenario } from '../novel/validate';
+import { displayInState, findCharacter, validateScenario } from '../novel/validate';
 import SettingsPanel from './SettingsPanel';
 import BacklogPanel, { type LogEntry } from './BacklogPanel';
 
@@ -251,18 +251,19 @@ function NovelPlayer({
           {POSITIONS.map((pos) => {
             const name = state.characters[pos];
             const info = name ? findCharacter(characters, name) : undefined;
-            if (!info) return null;
-            const image = characterImage(info, state.expressions[info.name] ?? state.expressions[info.id]);
+            if (!name || !info) return null;
+            const display = displayInState(state, name, info);
+            if (!display.image) return null;
             return (
               <SafeImage
                 key={`${pos}-${info.id}`}
                 className={`novel-character pos-${pos}`}
                 style={{
-                  height: `${info.height ?? 85}%`,
-                  bottom: `${-(info.offsetY ?? 0)}%`,
-                  marginLeft: `${info.offsetX ?? 0}%`,
+                  height: `${display.height}%`,
+                  bottom: `${-display.offsetY}%`,
+                  marginLeft: `${display.offsetX}%`,
                 }}
-                src={storyFileUrl(storyId, `characters/${image}`)}
+                src={storyFileUrl(storyId, `characters/${display.image}`)}
                 alt={info.name}
               />
             );

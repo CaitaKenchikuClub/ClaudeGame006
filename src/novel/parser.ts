@@ -16,6 +16,8 @@ export interface ParseResult {
 
 /** 「なし」と書くと消す指定になる */
 const NONE = 'なし';
+/** キャラ名の後ろに「全身」と書くと全身の立ち絵になる */
+const FULL_BODY = '全身';
 
 const CHARACTER_COMMANDS: Record<string, Position> = {
   キャラ画像: 'center',
@@ -86,6 +88,9 @@ export function parseScenario(source: string): ParseResult {
         commands.push(
           position === 'center' ? { line: lineNo, type: 'hideAllCharacters' } : { line: lineNo, type: 'character', position, name: null },
         );
+      } else if (args.length >= 2 && args[args.length - 1] === FULL_BODY) {
+        // 「#キャラ画像 キウイ 全身」で全身の立ち絵
+        commands.push({ line: lineNo, type: 'character', position, name: args.slice(0, -1).join(' '), full: true });
       } else {
         commands.push({ line: lineNo, type: 'character', position, name: arg });
       }

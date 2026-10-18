@@ -2,7 +2,7 @@
 // 開始時は最初の場面の画像だけを待ち、残りは再生しながら登場順に裏で読み込む。
 import type { AssetsFile, CharacterInfo } from '../types';
 import type { NovelState, Position, ScenarioCommand } from '../novel/engine';
-import { characterImage, findCharacter } from '../novel/validate';
+import { characterDisplay, displayInState, findCharacter } from '../novel/validate';
 import { storyFileUrl } from './paths';
 
 /** URL → 読み込みの Promise（同じ画像を二重に読み込まない） */
@@ -76,10 +76,8 @@ export function imagesForState(state: NovelState, { storyId, characters, assets 
   for (const pos of POSITIONS) {
     const name = state.characters[pos];
     const info = name ? findCharacter(characters, name) : undefined;
-    if (info) {
-      const image = characterImage(info, state.expressions[info.name] ?? state.expressions[info.id]);
-      urls.push(storyFileUrl(storyId, `characters/${image}`));
-    }
+    const image = name && info ? displayInState(state, name, info).image : undefined;
+    if (image) urls.push(storyFileUrl(storyId, `characters/${image}`));
   }
   return urls;
 }
@@ -99,11 +97,11 @@ export function collectEpisodeFiles(
     if (cmd.type === 'still' && cmd.name) add(images, 'stills', assets.stills?.[cmd.name]);
     if (cmd.type === 'character' && cmd.name) {
       const info = findCharacter(characters, cmd.name);
-      if (info) add(images, 'characters', info.image);
+      if (info) add(images, 'characters', characterDisplay(info, !!cmd.full, undefined).image);
     }
     if (cmd.type === 'expression' && cmd.expression) {
       const info = findCharacter(characters, cmd.character);
-      if (info) add(images, 'characters', characterImage(info, cmd.expression));
+      if (info) add(images, 'characters', characterDisplay(info, false, cmd.expression).image);
     }
     if (cmd.type === 'bgm' && cmd.name) add(audio, 'audio', assets.bgm?.[cmd.name]);
     if (cmd.type === 'se') add(audio, 'audio', assets.se?.[cmd.name]);

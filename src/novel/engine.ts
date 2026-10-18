@@ -4,8 +4,8 @@ export type Position = 'left' | 'center' | 'right';
 
 export type ScenarioCommand = { /** シナリオファイルの行番号（エラー表示用） */ line: number } & (
   | { type: 'background'; name: string }
-  /** name が null ならその位置の立ち絵を消す */
-  | { type: 'character'; position: Position; name: string | null }
+  /** name が null ならその位置の立ち絵を消す。full が true なら全身の立ち絵を出す */
+  | { type: 'character'; position: Position; name: string | null; full?: boolean }
   | { type: 'hideAllCharacters' }
   /** name が null ならスチルを消す */
   | { type: 'still'; name: string | null }
@@ -27,6 +27,8 @@ export interface NovelState {
   still: string | null;
   /** キャラ名 → 表情名 */
   expressions: Record<string, string>;
+  /** 全身の立ち絵で表示しているキャラ名 → true */
+  fullBody: Record<string, boolean>;
   bgm: string | null;
   /** 直前の step で鳴らす効果音 */
   se: string[];
@@ -41,6 +43,7 @@ export const initialNovelState: NovelState = {
   characters: { left: null, center: null, right: null },
   still: null,
   expressions: {},
+  fullBody: {},
   bgm: null,
   se: [],
   speaker: null,
@@ -50,7 +53,13 @@ export const initialNovelState: NovelState = {
 
 /** 次の文章（またはシナリオの終わり）までコマンドを実行した状態を返す */
 export function step(commands: ScenarioCommand[], state: NovelState): NovelState {
-  const s: NovelState = { ...state, characters: { ...state.characters }, expressions: { ...state.expressions }, se: [] };
+  const s: NovelState = {
+    ...state,
+    characters: { ...state.characters },
+    expressions: { ...state.expressions },
+    fullBody: { ...state.fullBody },
+    se: [],
+  };
   while (s.index < commands.length) {
     const cmd = commands[s.index++];
     switch (cmd.type) {
@@ -63,6 +72,7 @@ export function step(commands: ScenarioCommand[], state: NovelState): NovelState
           for (const pos of Object.keys(s.characters) as Position[]) {
             if (s.characters[pos] === cmd.name) s.characters[pos] = null;
           }
+          s.fullBody[cmd.name] = !!cmd.full;
         }
         s.characters[cmd.position] = cmd.name;
         break;

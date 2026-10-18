@@ -254,7 +254,10 @@
       function buildCharacters() {
         return {
           characters: state.characters.map((c) => {
-            const out = { id: c.id.trim(), name: c.name.trim(), image: c.image.trim() };
+            const out = { id: c.id.trim(), name: c.name.trim() };
+            if (c.image.trim()) out.image = c.image.trim();
+            const full = (c.full ?? '').trim();
+            if (full) out.full = c.fullExtra && Object.keys(c.fullExtra).length ? { image: full, ...c.fullExtra } : full;
             const expressions = c.expressions.filter(([k]) => k.trim());
             if (expressions.length) out.expressions = Object.fromEntries(expressions.map(([k, v]) => [k.trim(), v.trim()]));
             const height = toNumber(c.height);
@@ -312,9 +315,11 @@
           const list = buildCharacters().characters;
           list.forEach((c, n) => {
             const who = c.name || `キャラ${n + 1}`;
-            if (!c.id || !c.name || !c.image) w.push(`${who}：ID・名前・画像ファイル名をすべて入力してください`);
+            if (!c.id || !c.name) w.push(`${who}：ID と名前を入力してください`);
+            if (!c.image && !c.full) w.push(`${who}：バストアップか全身の画像ファイル名を入力してください`);
             if (c.id && !ID_PATTERN.test(c.id)) w.push(`${who}：ID は半角英数字と _ で付けてください`);
             fileCheck(c.image, `${who}の画像`);
+            fileCheck(typeof c.full === 'string' ? c.full : c.full?.image, `${who}の全身の画像`);
             for (const [k, v] of Object.entries(c.expressions ?? {})) {
               if (!v) w.push(`${who}の表情「${k}」：画像ファイル名を入力してください`);
               fileCheck(v, `${who}の表情「${k}」の画像`);
@@ -356,6 +361,9 @@
         if (tab === 'characters') {
           state.characters = (d.characters ?? []).map((c) => ({
             id: str(c.id), name: str(c.name), image: str(c.image),
+            // 全身はファイル名だけの形と、大きさなどを付けた形がある。付いていた値はそのまま残す
+            full: typeof c.full === 'object' && c.full ? str(c.full.image) : str(c.full),
+            fullExtra: typeof c.full === 'object' && c.full ? Object.fromEntries(Object.entries(c.full).filter(([k]) => k !== 'image')) : {},
             height: str(c.height), offsetX: str(c.offsetX), offsetY: str(c.offsetY),
             expressions: Object.entries(c.expressions ?? {}).map(([k, v]) => [k, str(v)]),
           }));
@@ -415,10 +423,13 @@
               el('div', { className: 'grid3' },
                 field('名前（シナリオで使う）', input(c.name, (v) => (c.name = v), { placeholder: 'サクラ' })),
                 field('ID（半角英数字）', input(c.id, (v) => (c.id = v), { placeholder: 'sakura' })),
-                field('立ち絵の画像ファイル名', input(c.image, (v) => (c.image = v), { placeholder: 'sakura.webp' })),
+              ),
+              el('div', { className: 'grid2' },
+                field('バストアップの画像ファイル名', input(c.image, (v) => (c.image = v), { placeholder: 'sakura_bust.webp' }), 'ふだんの立ち絵（#キャラ画像 サクラ）'),
+                field('全身の画像ファイル名（なくても可）', input(c.full, (v) => (c.full = v), { placeholder: 'sakura.webp' }), '#キャラ画像 サクラ 全身 で表示'),
               ),
               el('div', { className: 'grid3' },
-                field('高さ（%）', input(c.height, (v) => (c.height = v), { type: 'number', placeholder: '85' }), '全身 80〜90／バストアップ 50〜60'),
+                field('高さ（%）', input(c.height, (v) => (c.height = v), { type: 'number', placeholder: '75' }), '通常は空のまま（バストアップ 75・全身 85）'),
                 field('横の位置調整（%）', input(c.offsetX, (v) => (c.offsetX = v), { type: 'number', placeholder: '0' }), 'プラスで右へ。通常は空のまま'),
                 field('縦の位置調整（%）', input(c.offsetY, (v) => (c.offsetY = v), { type: 'number', placeholder: '0' }), 'プラスで下へ。通常は空のまま'),
               ),
@@ -568,7 +579,7 @@
         renderForms(); update();
       });
       document.getElementById('add-character').addEventListener('click', () => {
-        state.characters.push({ id: '', name: '', image: '', height: '85', offsetX: '', offsetY: '', expressions: [] });
+        state.characters.push({ id: '', name: '', image: '', full: '', fullExtra: {}, height: '', offsetX: '', offsetY: '', expressions: [] });
         renderForms(); update();
       });
       document.getElementById('add-story').addEventListener('click', () => {
