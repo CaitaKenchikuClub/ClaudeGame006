@@ -1,0 +1,144 @@
+:root {
+  --bg-outer: #0e0f13;
+  --bg: #1b1d24;
+  --surface: #262933;
+  --surface-2: #30343f;
+  --text: #ecebe8;
+  --text-sub: #a9abb3;
+  --accent: #d9a35b;
+  --error: #e5776b;
+  /* スマホ縦画面相当（9:16） */
+  --screen-ratio: 9 / 16;
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif;
+  color: var(--text);
+  background: var(--bg-outer);
+  -webkit-text-size-adjust: 100%;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+}
+
+body { overscroll-behavior: none; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* PC では中央にスマホ相当の画面、スマホでは全画面 */
+.app-frame {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-screen {
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: var(--screen-ratio);
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 画面幅が 9:16 より縦長（一般的なスマホ）なら全画面を使う */
+@media (max-aspect-ratio: 9 / 16) {
+  .game-screen { width: 100%; aspect-ratio: auto; }
+}
+
+/* ---- 共通ボタン ---- */
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 48px;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+}
+.btn-primary { background: var(--accent); color: #1b1d24; font-weight: bold; }
+.btn-primary:active { filter: brightness(0.9); }
+
+/* ---- タイトル画面 ---- */
+.title-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 64px;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 35%, #2f3340 0%, var(--bg) 70%);
+}
+.title-logo { text-align: center; }
+.title-sub { margin: 0 0 8px; color: var(--text-sub); font-size: 14px; letter-spacing: 0.2em; }
+.title-main { margin: 0; font-size: 40px; letter-spacing: 0.15em; }
+.title-footer { position: absolute; bottom: 24px; margin: 0; color: var(--text-sub); font-size: 12px; }
+
+/* ---- 共通ヘッダー ---- */
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--surface-2);
+}
+.screen-header h2 { margin: 0; font-size: 18px; }
+.btn-back {
+  width: 36px; height: 36px;
+  border: none; border-radius: 50%;
+  background: var(--surface);
+  font-size: 24px; line-height: 1;
+}
+
+/* ---- 作品一覧 ---- */
+.list-screen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.list-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.loading { color: var(--text-sub); text-align: center; }
+.error-box {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(229, 119, 107, 0.15);
+  color: var(--error);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.story-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+.story-cover {
+  flex: none;
+  width: 90px;
+  aspect-ratio: 5 / 7;
+  object-fit: cover; /* 比率を保ったままトリミング */
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.story-cover.missing { visibility: hidden; }
+.story-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.story-title { margin: 0; font-size: 16px; }
+.story-author { margin: 0; font-size: 13px; color: var(--text-sub); }
+.story-genre {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--accent);
+  font-size: 11px;
+}
+.story-summary { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--text-sub); }

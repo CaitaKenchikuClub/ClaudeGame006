@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c6a8"/><stop offset="1" stop-color="#e98a7a"/></linearGradient></defs>
+  <rect width="300" height="420" fill="url(#g)"/>
+  <rect x="60" y="90" width="180" height="150" fill="#fff6e8" stroke="#8a5a44" stroke-width="6"/>
+  <line x1="150" y1="90" x2="150" y2="240" stroke="#8a5a44" stroke-width="5"/>
+  <line x1="60" y1="165" x2="240" y2="165" stroke="#8a5a44" stroke-width="5"/>
+  <circle cx="205" cy="125" r="18" fill="#ffd36b"/>
+  <text x="150" y="320" text-anchor="middle" font-size="26" fill="#4a2a20" font-family="sans-serif">放課後のひだまり</text>
+  <text x="150" y="360" text-anchor="middle" font-size="16" fill="#4a2a20" font-family="sans-serif">SAMPLE</text>
+</svg>

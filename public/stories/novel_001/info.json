@@ -1,0 +1,14 @@
+{
+  "id": "novel_001",
+  "title": "放課後のひだまり（サンプル）",
+  "author": "サンプル作者A",
+  "cover": "cover.svg",
+  "summary": "春の教室で出会った二人の、少し不思議な放課後の物語。（動作確認用のサンプル作品です）",
+  "synopsis": "転校生のサクラは、放課後の教室でいつも窓の外を眺めている少女ルリと出会う。ルリが見つめていたものとは――。\nこの作品はゲームの動作確認用に用意したダミーです。",
+  "genre": "青春・日常",
+  "originalUrl": "https://example.com/novel_001",
+  "episodes": [
+    { "id": "episode_01", "title": "第1話 ひだまりの窓辺", "file": "episode_01.txt", "order": 1 },
+    { "id": "episode_02", "title": "第2話 夕焼けの約束", "file": "episode_02.txt", "order": 2 }
+  ]
+}
