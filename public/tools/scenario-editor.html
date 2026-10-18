@@ -255,7 +255,8 @@
       const status = document.getElementById('story-status');
       const base = new URL('../stories/', location.href);
       const getJson = async (path) => {
-        const res = await fetch(new URL(path, base));
+        // 更新直後でも最新の名前を読めるよう、毎回サーバーに新しいか確認する
+        const res = await fetch(new URL(path, base), { cache: 'no-cache' });
         if (!res.ok || res.headers.get('content-type')?.includes('text/html')) throw new Error(path);
         return res.json();
       };

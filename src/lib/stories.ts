@@ -5,7 +5,9 @@ import { storiesUrl, storyFileUrl } from './paths';
 class FileNotFoundError extends Error {}
 
 async function fetchFile(url: string): Promise<Response> {
-  const res = await fetch(url);
+  // 作品一覧・設定・シナリオは更新されたらすぐ反映されるよう、毎回サーバーに新しいか確認する
+  // （変わっていなければ保存済みのものを使うので、通信量はほとんど増えない）
+  const res = await fetch(url, { cache: 'no-cache' });
   // 開発サーバーは存在しないファイルに対して index.html を返すため、HTML が返ったら「見つからない」扱いにする
   if (!res.ok || res.headers.get('content-type')?.includes('text/html')) {
     throw new FileNotFoundError(`${decodeURI(url)} が見つかりません`);
