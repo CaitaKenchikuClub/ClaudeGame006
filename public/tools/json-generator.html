@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>設定ファイル作成ツール</title>
+    <style>
+      :root {
+        --bg: #1b1d24;
+        --surface: #262933;
+        --surface-2: #30343f;
+        --text: #ecebe8;
+        --text-sub: #a9abb3;
+        --accent: #d9a35b;
+        --warn: #e5b56b;
+        --error: #e5776b;
+        font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 16px; }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .lead { margin: 0 0 16px; color: var(--text-sub); font-size: 13px; line-height: 1.7; }
+      button, input, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+
+      .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+      .tabs button {
+        padding: 8px 14px;
+        border: 1px solid var(--surface-2);
+        border-radius: 999px;
+        background: transparent;
+        font-size: 14px;
+      }
+      .tabs button.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+      .tabs small { opacity: 0.75; font-weight: normal; }
+
+      .panel { display: none; }
+      .panel.active { display: block; }
+      .card { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+      .card h2 { margin: 0 0 12px; font-size: 15px; }
+      .card h3 { margin: 16px 0 8px; font-size: 14px; color: var(--text-sub); }
+
+      label.field { display: block; margin-bottom: 12px; }
+      label.field > span { display: block; font-size: 13px; margin-bottom: 4px; }
+      label.field > small, .hint { display: block; color: var(--text-sub); font-size: 12px; margin-top: 3px; line-height: 1.6; }
+      input[type='text'], input[type='number'], input[type='url'], textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        background: var(--bg);
+      }
+      textarea { min-height: 80px; resize: vertical; line-height: 1.6; }
+      input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+      .rows { display: flex; flex-direction: column; gap: 8px; }
+      .row { display: flex; gap: 6px; align-items: center; }
+      .row input { min-width: 0; }
+      .row .num { flex: 0 0 64px; }
+      .row .grow { flex: 1; }
+      .item { border: 1px solid var(--surface-2); border-radius: 10px; padding: 12px; }
+      .item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--text-sub); }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+      .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 10px; }
+      @media (max-width: 560px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+      .btn {
+        padding: 8px 14px;
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+      .btn.small { padding: 4px 10px; font-size: 12px; }
+      .btn.del { flex: none; color: var(--error); border-color: transparent; }
+      .add { margin-top: 8px; }
+
+      .output pre {
+        margin: 0;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--bg);
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 420px;
+        overflow: auto;
+      }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; align-items: center; }
+      .toast { color: var(--accent); font-size: 13px; }
+      .warnings { margin: 0 0 12px; padding: 0 0 0 1.2em; color: var(--warn); font-size: 13px; line-height: 1.7; }
+      .warnings:empty { display: none; }
+      details { margin-top: 12px; font-size: 13px; }
+      details summary { cursor: pointer; color: var(--text-sub); }
+      details textarea { margin-top: 8px; min-height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+      .load-error { color: var(--error); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>設定ファイル作成ツール</h1>
+      <p class="lead">
+        作品フォルダに入れる JSON ファイルを、入力欄に書くだけで作れます。<br />
+        下の「コピー」でコピーして貼り付けるか、「ダウンロード」でファイルとして保存してください。<br />
+        入力内容はこのブラウザに自動で保存されます（次に開いたときも残っています）。
+      </p>
+
+      <div class="tabs" role="tablist">
+        <button data-tab="info" class="active">作品情報 <small>info.json</small></button>
+        <button data-tab="characters">キャラクター <small>characters.json</small></button>
+        <button data-tab="assets">背景・スチル・音 <small>assets.json</small></button>
+        <button data-tab="catalog">作品一覧 <small>catalog.json</small></button>
+      </div>
+
+      <!-- 作品情報 -->
+      <section class="panel active" id="panel-info">
+        <div class="card">
+          <h2>作品情報</h2>
+          <label class="field"><span>作品ID（フォルダ名と同じ）</span><input type="text" data-key="id" placeholder="novel_003" />
+            <small>半角英数字と _ で付けます</small></label>
+          <label class="field"><span>作品タイトル</span><input type="text" data-key="title" /></label>
+          <div class="grid2">
+            <label class="field"><span>作者名</span><input type="text" data-key="author" /></label>
+            <label class="field"><span>ジャンル</span><input type="text" data-key="genre" placeholder="青春・日常" /></label>
+          </div>
+          <label class="field"><span>表紙画像のファイル名</span><input type="text" data-key="cover" placeholder="cover.webp" />
+            <small>作品フォルダの直下に入れた画像のファイル名</small></label>
+          <label class="field"><span>短い紹介文（作品一覧に表示）</span><textarea data-key="summary" rows="2"></textarea></label>
+          <label class="field"><span>あらすじ（作品詳細に表示）</span><textarea data-key="synopsis" rows="4"></textarea>
+            <small>そのまま改行して書けます（自動で \n に変換されます）</small></label>
+          <label class="field"><span>原作掲載ページの URL</span><input type="url" data-key="originalUrl" placeholder="https://" /></label>
+
+          <h3>エピソード</h3>
+          <div class="rows" id="episodes"></div>
+          <button class="btn add" id="add-episode">＋ エピソードを追加</button>
+        </div>
+        <div class="card output" data-output="info"></div>
+      </section>
+
+      <!-- キャラクター -->
+      <section class="panel" id="panel-characters">
+        <div class="card">
+          <h2>キャラクター</h2>
+          <div class="rows" id="characters"></div>
+          <button class="btn add" id="add-character">＋ キャラクターを追加</button>
+        </div>
+        <div class="card output" data-output="characters"></div>
+      </section>
+
+      <!-- 素材 -->
+      <section class="panel" id="panel-assets">
+        <div class="card">
+          <h2>背景・スチル・音</h2>
+          <p class="hint" style="margin-top: 0">左にシナリオで使う名前、右にファイル名を書きます。使わない項目は空のままで大丈夫です。</p>
+          <div id="asset-groups"></div>
+        </div>
+        <div class="card output" data-output="assets"></div>
+      </section>
+
+      <!-- 作品一覧 -->
+      <section class="panel" id="panel-catalog">
+        <div class="card">
+          <h2>作品一覧</h2>
+          <p class="hint" style="margin-top: 0">公開する作品の ID を、表示したい順に並べます。ここから消した作品は一覧に出なくなります。</p>
+          <div class="rows" id="catalog"></div>
+          <button class="btn add" id="add-story">＋ 作品を追加</button>
+        </div>
+        <div class="card output" data-output="catalog"></div>
+      </section>
+    </main>
+
+    <script>
+      'use strict';
+
+      const FILES = {
+        info: 'info.json',
+        characters: 'characters.json',
+        assets: 'assets.json',
+        catalog: 'catalog.json',
+      };
+      const ASSET_GROUPS = [
+        ['backgrounds', '背景', '#背景 教室', 'backgrounds', 'classroom.webp'],
+        ['stills', 'スチル', '#スチル 夕焼け', 'stills', 'sunset.webp'],
+        ['bgm', 'BGM', '#BGM 日常', 'audio', 'daily.mp3'],
+        ['se', '効果音', '#効果音 ドア', 'audio', 'door.mp3'],
+      ];
+      const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+      const FILE_PATTERN = /^[A-Za-z0-9_.-]+$/;
+
+      // ---------- 入力内容（自動保存） ----------
+      const STORAGE_KEY = 'novel-collab-json-generator';
+      const blank = () => ({
+        info: {
+          id: '', title: '', author: '', cover: '', summary: '', synopsis: '', genre: '', originalUrl: '',
+          episodes: [{ id: 'episode_01', title: '', file: 'episode_01.txt', order: 1 }],
+        },
+        characters: [],
+        assets: { backgrounds: [], stills: [], bgm: [], se: [] },
+        catalog: [],
+      });
+      let state = blank();
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved) state = { ...state, ...saved };
+      } catch {}
+      const save = () => {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+      };
+
+      // ---------- 小さな部品 ----------
+      const el = (tag, props = {}, ...children) => {
+        const e = document.createElement(tag);
+        Object.assign(e, props);
+        for (const c of children) e.append(c);
+        return e;
+      };
+      /** 入力欄。入力するたびに onInput(value) を呼ぶ */
+      const input = (value, onInput, props = {}) => {
+        const i = el('input', { type: 'text', value: value ?? '', ...props });
+        i.addEventListener('input', () => { onInput(i.value); update(); });
+        return i;
+      };
+      const delButton = (onClick) => {
+        const b = el('button', { className: 'btn del', textContent: '削除', title: '削除' });
+        b.addEventListener('click', () => { onClick(); renderForms(); update(); });
+        return b;
+      };
+      const field = (label, control, hint) =>
+        el('label', { className: 'field' }, el('span', { textContent: label }), control, ...(hint ? [el('small', { textContent: hint })] : []));
+      const pad2 = (n) => String(n).padStart(2, '0');
+      const toNumber = (v) => (v === '' || v === null || v === undefined || isNaN(Number(v)) ? undefined : Number(v));
+
+      // ---------- JSON の組み立て ----------
+      function buildInfo() {
+        const i = state.info;
+        return {
+          id: i.id.trim(),
+          title: i.title,
+          author: i.author,
+          cover: i.cover.trim(),
+          summary: i.summary,
+          synopsis: i.synopsis,
+          genre: i.genre,
+          originalUrl: i.originalUrl.trim(),
+          episodes: i.episodes.map((ep) => ({ id: ep.id.trim(), title: ep.title, file: ep.file.trim(), order: toNumber(ep.order) ?? 0 })),
+        };
+      }
+      function buildCharacters() {
+        return {
+          characters: state.characters.map((c) => {
+            const out = { id: c.id.trim(), name: c.name.trim(), image: c.image.trim() };
+            const expressions = c.expressions.filter(([k]) => k.trim());
+            if (expressions.length) out.expressions = Object.fromEntries(expressions.map(([k, v]) => [k.trim(), v.trim()]));
+            const height = toNumber(c.height);
+            if (height !== undefined) out.height = height;
+            const offsetX = toNumber(c.offsetX);
+            if (offsetX) out.offsetX = offsetX;
+            const offsetY = toNumber(c.offsetY);
+            if (offsetY) out.offsetY = offsetY;
+            return out;
+          }),
+        };
+      }
+      function buildAssets() {
+        const out = {};
+        for (const [key] of ASSET_GROUPS) {
+          out[key] = Object.fromEntries(state.assets[key].filter(([k]) => k.trim()).map(([k, v]) => [k.trim(), v.trim()]));
+        }
+        return out;
+      }
+      const buildCatalog = () => ({ stories: state.catalog.map((s) => s.trim()).filter(Boolean) });
+      const BUILDERS = { info: buildInfo, characters: buildCharacters, assets: buildAssets, catalog: buildCatalog };
+
+      // ---------- 入力ミスの注意 ----------
+      function warnings(tab) {
+        const w = [];
+        const fileCheck = (file, what) => {
+          if (file && !FILE_PATTERN.test(file)) w.push(`${what}「${file}」：ファイル名は半角英数字と _ - . にしてください`);
+        };
+        const dupCheck = (list, what) => {
+          const seen = new Set();
+          for (const v of list) {
+            if (v && seen.has(v)) w.push(`${what}「${v}」が重複しています`);
+            seen.add(v);
+          }
+        };
+        if (tab === 'info') {
+          const i = buildInfo();
+          if (!i.id) w.push('作品ID を入力してください');
+          else if (!ID_PATTERN.test(i.id)) w.push('作品ID は半角英数字と _ で付けてください');
+          for (const k of ['title', 'author', 'genre', 'cover', 'summary', 'synopsis', 'originalUrl']) {
+            if (!String(i[k]).trim()) w.push(`「${labelOf(k)}」が空です`);
+          }
+          if (i.originalUrl && !/^https?:\/\//.test(i.originalUrl)) w.push('原作の URL は https:// から始めてください');
+          fileCheck(i.cover, '表紙画像');
+          if (!i.episodes.length) w.push('エピソードを1つ以上追加してください');
+          i.episodes.forEach((ep, n) => {
+            if (!ep.id || !ep.title || !ep.file) w.push(`エピソード${n + 1}：ID・タイトル・ファイル名をすべて入力してください`);
+            if (ep.id && !ID_PATTERN.test(ep.id)) w.push(`エピソード${n + 1}：ID は半角英数字と _ で付けてください`);
+            if (ep.file && !ep.file.endsWith('.txt')) w.push(`エピソード${n + 1}：シナリオのファイル名は .txt で終わるようにしてください`);
+            fileCheck(ep.file, `エピソード${n + 1}のファイル名`);
+          });
+          dupCheck(i.episodes.map((e) => e.id), 'エピソードID');
+        }
+        if (tab === 'characters') {
+          const list = buildCharacters().characters;
+          list.forEach((c, n) => {
+            const who = c.name || `キャラ${n + 1}`;
+            if (!c.id || !c.name || !c.image) w.push(`${who}：ID・名前・画像ファイル名をすべて入力してください`);
+            if (c.id && !ID_PATTERN.test(c.id)) w.push(`${who}：ID は半角英数字と _ で付けてください`);
+            fileCheck(c.image, `${who}の画像`);
+            for (const [k, v] of Object.entries(c.expressions ?? {})) {
+              if (!v) w.push(`${who}の表情「${k}」：画像ファイル名を入力してください`);
+              fileCheck(v, `${who}の表情「${k}」の画像`);
+            }
+          });
+          dupCheck(list.flatMap((c) => [c.id, c.name]), 'ID・名前');
+        }
+        if (tab === 'assets') {
+          const a = buildAssets();
+          for (const [key, label] of ASSET_GROUPS) {
+            for (const [k, v] of Object.entries(a[key])) {
+              if (!v) w.push(`${label}「${k}」：ファイル名を入力してください`);
+              fileCheck(v, `${label}「${k}」`);
+            }
+            dupCheck(state.assets[key].map(([k]) => k.trim()), `${label}の名前`);
+          }
+        }
+        if (tab === 'catalog') {
+          const ids = buildCatalog().stories;
+          ids.forEach((id) => { if (!ID_PATTERN.test(id)) w.push(`作品ID「${id}」は半角英数字と _ で付けてください`); });
+          dupCheck(ids, '作品ID');
+        }
+        return w;
+      }
+      const labelOf = (k) =>
+        ({ title: '作品タイトル', author: '作者名', genre: 'ジャンル', cover: '表紙画像のファイル名', summary: '短い紹介文', synopsis: 'あらすじ', originalUrl: '原作掲載ページの URL' })[k];
+
+      // ---------- 既存ファイルの読み込み ----------
+      function load(tab, json) {
+        const d = JSON.parse(json.replace(/^﻿/, ''));
+        const str = (v) => (v === undefined || v === null ? '' : String(v));
+        if (tab === 'info') {
+          state.info = {
+            ...blank().info,
+            ...Object.fromEntries(['id', 'title', 'author', 'cover', 'summary', 'synopsis', 'genre', 'originalUrl'].map((k) => [k, str(d[k])])),
+            episodes: (d.episodes ?? []).map((ep) => ({ id: str(ep.id), title: str(ep.title), file: str(ep.file), order: str(ep.order) })),
+          };
+        }
+        if (tab === 'characters') {
+          state.characters = (d.characters ?? []).map((c) => ({
+            id: str(c.id), name: str(c.name), image: str(c.image),
+            height: str(c.height), offsetX: str(c.offsetX), offsetY: str(c.offsetY),
+            expressions: Object.entries(c.expressions ?? {}).map(([k, v]) => [k, str(v)]),
+          }));
+        }
+        if (tab === 'assets') {
+          for (const [key] of ASSET_GROUPS) state.assets[key] = Object.entries(d[key] ?? {}).map(([k, v]) => [k, str(v)]);
+        }
+        if (tab === 'catalog') state.catalog = (d.stories ?? []).map(str);
+      }
+
+      // ---------- 画面の描画 ----------
+      function renderInfoFields() {
+        document.querySelectorAll('#panel-info [data-key]').forEach((node) => {
+          node.value = state.info[node.dataset.key] ?? '';
+        });
+      }
+      document.querySelectorAll('#panel-info [data-key]').forEach((node) => {
+        node.addEventListener('input', () => { state.info[node.dataset.key] = node.value; update(); });
+      });
+
+      function renderEpisodes() {
+        const box = document.getElementById('episodes');
+        box.replaceChildren(
+          ...state.info.episodes.map((ep, n) =>
+            el('div', { className: 'item' },
+              el('div', { className: 'item-head' }, el('span', { textContent: `エピソード ${n + 1}` }),
+                delButton(() => state.info.episodes.splice(state.info.episodes.indexOf(ep), 1))),
+              field('タイトル', input(ep.title, (v) => (ep.title = v), { placeholder: '第1話 タイトル' })),
+              el('div', { className: 'grid3' },
+                field('エピソードID', input(ep.id, (v) => (ep.id = v), { placeholder: 'episode_01' }), '公開後は変えない'),
+                field('シナリオのファイル名', input(ep.file, (v) => (ep.file = v), { placeholder: 'episode_01.txt' })),
+                field('表示順', input(ep.order, (v) => (ep.order = v), { type: 'number' }), '小さい順に並ぶ'),
+              ),
+            ),
+          ),
+        );
+      }
+
+      function renderCharacters() {
+        const box = document.getElementById('characters');
+        box.replaceChildren(
+          ...state.characters.map((c, n) => {
+            const expressions = el('div', { className: 'rows' },
+              ...c.expressions.map((pair) =>
+                el('div', { className: 'row' },
+                  input(pair[0], (v) => (pair[0] = v), { className: 'grow', placeholder: '表情名（例：笑顔）' }),
+                  input(pair[1], (v) => (pair[1] = v), { className: 'grow', placeholder: '画像ファイル名（例：sakura_smile.webp）' }),
+                  delButton(() => c.expressions.splice(c.expressions.indexOf(pair), 1)),
+                ),
+              ),
+            );
+            const addExpression = el('button', { className: 'btn small add', textContent: '＋ 表情を追加' });
+            addExpression.addEventListener('click', () => { c.expressions.push(['', '']); renderForms(); update(); });
+            return el('div', { className: 'item' },
+              el('div', { className: 'item-head' }, el('span', { textContent: `キャラクター ${n + 1}` }),
+                delButton(() => state.characters.splice(state.characters.indexOf(c), 1))),
+              el('div', { className: 'grid3' },
+                field('名前（シナリオで使う）', input(c.name, (v) => (c.name = v), { placeholder: 'サクラ' })),
+                field('ID（半角英数字）', input(c.id, (v) => (c.id = v), { placeholder: 'sakura' })),
+                field('立ち絵の画像ファイル名', input(c.image, (v) => (c.image = v), { placeholder: 'sakura.webp' })),
+              ),
+              el('div', { className: 'grid3' },
+                field('高さ（%）', input(c.height, (v) => (c.height = v), { type: 'number', placeholder: '85' }), '全身 80〜90／バストアップ 50〜60'),
+                field('横の位置調整（%）', input(c.offsetX, (v) => (c.offsetX = v), { type: 'number', placeholder: '0' }), 'プラスで右へ。通常は空のまま'),
+                field('縦の位置調整（%）', input(c.offsetY, (v) => (c.offsetY = v), { type: 'number', placeholder: '0' }), 'プラスで下へ。通常は空のまま'),
+              ),
+              el('h3', { textContent: '表情差分（なくても可）' }),
+              expressions,
+              addExpression,
+            );
+          }),
+        );
+      }
+
+      function renderAssets() {
+        const box = document.getElementById('asset-groups');
+        box.replaceChildren(
+          ...ASSET_GROUPS.map(([key, label, example, folder, fileExample]) => {
+            const add = el('button', { className: 'btn small add', textContent: `＋ ${label}を追加` });
+            add.addEventListener('click', () => { state.assets[key].push(['', '']); renderForms(); update(); });
+            return el('div', {},
+              el('h3', { textContent: `${label}（${folder} フォルダ）` }),
+              el('div', { className: 'hint', textContent: `シナリオでの使い方：${example}`, style: 'margin-bottom:6px' }),
+              el('div', { className: 'rows' },
+                ...state.assets[key].map((pair) =>
+                  el('div', { className: 'row' },
+                    input(pair[0], (v) => (pair[0] = v), { className: 'grow', placeholder: `名前（例：${example.split(' ')[1]}）` }),
+                    input(pair[1], (v) => (pair[1] = v), { className: 'grow', placeholder: `ファイル名（例：${fileExample}）` }),
+                    delButton(() => state.assets[key].splice(state.assets[key].indexOf(pair), 1)),
+                  ),
+                ),
+              ),
+              add,
+            );
+          }),
+        );
+      }
+
+      function renderCatalog() {
+        const box = document.getElementById('catalog');
+        box.replaceChildren(
+          ...state.catalog.map((id, n) => {
+            const up = el('button', { className: 'btn small', textContent: '↑', title: '上へ', disabled: n === 0 });
+            up.addEventListener('click', () => {
+              [state.catalog[n - 1], state.catalog[n]] = [state.catalog[n], state.catalog[n - 1]];
+              renderForms(); update();
+            });
+            return el('div', { className: 'row' },
+              el('span', { textContent: `${n + 1}.`, className: 'hint', style: 'width:2em;margin:0' }),
+              input(id, (v) => (state.catalog[n] = v), { className: 'grow', placeholder: 'novel_001' }),
+              up,
+              delButton(() => state.catalog.splice(n, 1)),
+            );
+          }),
+        );
+      }
+
+      function renderForms() {
+        renderInfoFields();
+        renderEpisodes();
+        renderCharacters();
+        renderAssets();
+        renderCatalog();
+      }
+
+      // ---------- 出力欄 ----------
+      const outputs = {};
+      for (const node of document.querySelectorAll('[data-output]')) {
+        const tab = node.dataset.output;
+        const pre = el('pre');
+        const warn = el('ul', { className: 'warnings' });
+        const toast = el('span', { className: 'toast' });
+        const flash = (msg) => { toast.textContent = msg; setTimeout(() => (toast.textContent = ''), 2000); };
+
+        const copy = el('button', { className: 'btn primary', textContent: 'コピー' });
+        copy.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(pre.textContent);
+          } catch {
+            const range = document.createRange();
+            range.selectNodeContents(pre);
+            getSelection().removeAllRanges();
+            getSelection().addRange(range);
+            document.execCommand('copy');
+          }
+          flash('コピーしました');
+        });
+        const download = el('button', { className: 'btn primary', textContent: `ダウンロード（${FILES[tab]}）` });
+        download.addEventListener('click', () => {
+          const url = URL.createObjectURL(new Blob([pre.textContent], { type: 'application/json' }));
+          el('a', { href: url, download: FILES[tab] }).click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
+        const clear = el('button', { className: 'btn', textContent: '入力を消す' });
+        clear.addEventListener('click', () => {
+          if (!confirm('このタブの入力内容をすべて消しますか？')) return;
+          state[tab] = blank()[tab];
+          renderForms(); update();
+        });
+
+        // 既存ファイルの読み込み（ファイル選択 または 貼り付け）
+        const loadMsg = el('div', { className: 'hint' });
+        const doLoad = (text) => {
+          try {
+            load(tab, text);
+            renderForms(); update();
+            loadMsg.className = 'hint';
+            loadMsg.textContent = '読み込みました';
+          } catch (e) {
+            loadMsg.className = 'hint load-error';
+            loadMsg.textContent = `読み込めませんでした：JSON の書き方に誤りがあります（${e.message}）`;
+          }
+        };
+        const fileInput = el('input', { type: 'file', accept: '.json,application/json' });
+        fileInput.addEventListener('change', async () => {
+          if (fileInput.files[0]) doLoad(await fileInput.files[0].text());
+          fileInput.value = '';
+        });
+        const paste = el('textarea', { placeholder: `${FILES[tab]} の中身をここに貼り付けて「読み込む」を押してください` });
+        const pasteButton = el('button', { className: 'btn small', textContent: '読み込む' });
+        pasteButton.addEventListener('click', () => doLoad(paste.value));
+
+        node.append(
+          el('h2', { textContent: `${FILES[tab]} の中身` }),
+          warn,
+          pre,
+          el('div', { className: 'actions' }, copy, download, clear, toast),
+          el('details', {},
+            el('summary', { textContent: `今ある ${FILES[tab]} を読み込んで編集する` }),
+            el('div', { className: 'hint', textContent: 'ファイルを選ぶ：', style: 'margin-top:8px' }), fileInput,
+            el('div', { className: 'hint', textContent: 'または中身を貼り付ける：', style: 'margin-top:8px' }), paste,
+            el('div', { className: 'actions' }, pasteButton, loadMsg),
+          ),
+        );
+        outputs[tab] = { pre, warn };
+      }
+
+      function update() {
+        for (const [tab, { pre, warn }] of Object.entries(outputs)) {
+          pre.textContent = JSON.stringify(BUILDERS[tab](), null, 2) + '\n';
+          warn.replaceChildren(...warnings(tab).map((t) => el('li', { textContent: t })));
+        }
+        save();
+      }
+
+      // ---------- 追加ボタン・タブ ----------
+      document.getElementById('add-episode').addEventListener('click', () => {
+        const n = state.info.episodes.length + 1;
+        state.info.episodes.push({ id: `episode_${pad2(n)}`, title: '', file: `episode_${pad2(n)}.txt`, order: n });
+        renderForms(); update();
+      });
+      document.getElementById('add-character').addEventListener('click', () => {
+        state.characters.push({ id: '', name: '', image: '', height: '85', offsetX: '', offsetY: '', expressions: [] });
+        renderForms(); update();
+      });
+      document.getElementById('add-story').addEventListener('click', () => {
+        state.catalog.push('');
+        renderForms(); update();
+      });
+      for (const b of document.querySelectorAll('.tabs button')) {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
+          document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.id === `panel-${b.dataset.tab}`));
+        });
+      }
+
+      renderForms();
+      update();
+    </script>
+  </body>
+</html>

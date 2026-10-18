@@ -14,7 +14,9 @@ React + TypeScript + Vite で作成し、GitHub Pages で公開しています�
 | [作品の追加方法](docs/作品の追加方法.md) | 作品・エピソードの追加手順、設定ファイルの書き方、画像・音声の推奨形式、公開のしかた |
 | [シナリオの書き方](docs/シナリオの書き方.md) | シナリオ（.txt）のコマンド一覧、文章のルール、エラーの直し方 |
 
-新しい作品は `templates/story_template` をコピーして作れます。ゲーム本体のプログラムを編集する必要はありません。
+新しい作品は `templates/story_template`（中身が空のひな形）をコピーして作れます。ゲーム本体のプログラムを編集する必要はありません。
+
+設定ファイル（JSON）は **[設定ファイル作成ツール](https://caitakenchikuclub.github.io/ClaudeGame006/tools/json-generator.html)** で、入力欄に書くだけで作れます（コピー・ダウンロード・既存ファイルの読み込みに対応）。
 
 ## フォルダ構成
 
@@ -22,7 +24,8 @@ React + TypeScript + Vite で作成し、GitHub Pages で公開しています�
 public/stories/          … 作品データ（作品ごとにフォルダを分けて管理）
   catalog.json           … 作品一覧（ここに書いた順に並ぶ）
   novel_001/             … 作品フォルダ（info.json・characters.json・assets.json・シナリオ・素材）
-templates/story_template … 新しい作品のひな形
+public/tools/             … 設定ファイル作成ツール（json-generator.html）
+templates/story_template … 新しい作品のひな形（設定ファイルのみ・中身は空）
 docs/                    … 説明書
 src/                     … ゲーム本体
 scripts/                 … 公開前チェックとテスト
