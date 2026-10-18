@@ -1,0 +1,13 @@
+{
+  "id": "",
+  "title": "",
+  "author": "",
+  "cover": "",
+  "summary": "",
+  "synopsis": "",
+  "genre": "",
+  "originalUrl": "",
+  "episodes": [
+    { "id": "episode_01", "title": "", "file": "episode_01.txt", "order": 1 }
+  ]
+}
