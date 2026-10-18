@@ -324,8 +324,6 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   cursor: default;
 }
 .novel-loading p { margin: 0; }
-.loading-bar { width: 60%; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
-.loading-bar > div { height: 100%; background: var(--accent); transition: width 0.2s; }
 
 .novel-fatal {
   display: flex;
@@ -379,6 +377,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   animation: blink 1s steps(2) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
+.message-next.waiting { animation: none; color: var(--text-sub); font-size: 11px; }
 
 /* ---- 設定・バックログ（画面全体に重ねる） ---- */
 .overlay {

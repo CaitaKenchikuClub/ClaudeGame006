@@ -1,18 +1,93 @@
-// エピソードで使う画像・音声を、再生前に読み込んでおく。
+// 画像・音声の先読み。
+// 開始時は最初の場面の画像だけを待ち、残りは再生しながら登場順に裏で読み込む。
 import type { AssetsFile, CharacterInfo } from '../types';
-import type { ScenarioCommand } from '../novel/engine';
+import type { NovelState, Position, ScenarioCommand } from '../novel/engine';
 import { characterImage, findCharacter } from '../novel/validate';
 import { storyFileUrl } from './paths';
 
-/** 読み込み済みの画像。参照を持ち続けて、ブラウザのメモリから消えにくくする */
-const loadedImages = new Map<string, HTMLImageElement>();
+/** URL → 読み込みの Promise（同じ画像を二重に読み込まない） */
+const loading = new Map<string, Promise<void>>();
+/** 表示できる状態になった画像。参照を持ち続けて、ブラウザのメモリから消えにくくする */
+const ready = new Map<string, HTMLImageElement>();
+/** 読み込みが終わった画像（失敗も含む。失敗した画像を何度も待たないため） */
+const settled = new Set<string>();
 
-/** シナリオで使う画像と音声の URL を集める（重複なし） */
+/** 画像を1枚読み込んで表示できる状態にする。失敗しても止めない */
+export function preloadImage(url: string): Promise<void> {
+  let p = loading.get(url);
+  if (!p) {
+    const img = new Image();
+    img.src = url;
+    p = img
+      .decode()
+      .then(
+        () => void ready.set(url, img),
+        () => console.warn(`画像を読み込めませんでした: ${url}`),
+      )
+      .finally(() => settled.add(url));
+    loading.set(url, p);
+  }
+  return p;
+}
+
+/** 読み込みが終わっている（失敗も含む）か */
+export function isImageSettled(url: string): boolean {
+  return settled.has(url);
+}
+
+/** 画像の読み込みを待つ。timeoutMs を過ぎたら待つのをやめる */
+export async function waitForImages(urls: string[], timeoutMs: number): Promise<void> {
+  await Promise.race([Promise.all(urls.map(preloadImage)), new Promise((r) => setTimeout(r, timeoutMs))]);
+}
+
+/** 画像を順番に裏で読み込む（同時に読み込むのは concurrency 枚まで） */
+export function preloadInBackground(urls: string[], concurrency = 3): void {
+  const queue = [...urls];
+  const next = (): Promise<void> | undefined => {
+    const url = queue.shift();
+    return url === undefined ? undefined : preloadImage(url).then(next);
+  };
+  for (let i = 0; i < concurrency; i++) next();
+}
+
+/** 音声は再生を待たせず、裏で取得してブラウザのキャッシュに入れておく */
+export function prefetchAudio(urls: string[]): void {
+  for (const url of urls) fetch(url).catch(() => {});
+}
+
+interface EpisodeContext {
+  storyId: string;
+  characters: CharacterInfo[];
+  assets: AssetsFile;
+}
+
+const POSITIONS: Position[] = ['left', 'center', 'right'];
+
+/** ある場面で画面に表示される画像の URL */
+export function imagesForState(state: NovelState, { storyId, characters, assets }: EpisodeContext): string[] {
+  const urls: string[] = [];
+  const bg = state.background ? assets.backgrounds?.[state.background] : undefined;
+  if (bg) urls.push(storyFileUrl(storyId, `backgrounds/${bg}`));
+  if (state.still !== null) {
+    const still = assets.stills?.[state.still];
+    if (still) urls.push(storyFileUrl(storyId, `stills/${still}`));
+    return urls; // スチル表示中は立ち絵を出さない
+  }
+  for (const pos of POSITIONS) {
+    const name = state.characters[pos];
+    const info = name ? findCharacter(characters, name) : undefined;
+    if (info) {
+      const image = characterImage(info, state.expressions[info.name] ?? state.expressions[info.id]);
+      urls.push(storyFileUrl(storyId, `characters/${image}`));
+    }
+  }
+  return urls;
+}
+
+/** シナリオで使う画像（登場順）と音声の URL を集める（重複なし） */
 export function collectEpisodeFiles(
-  storyId: string,
   commands: ScenarioCommand[],
-  characters: CharacterInfo[],
-  assets: AssetsFile,
+  { storyId, characters, assets }: EpisodeContext,
 ): { images: string[]; audio: string[] } {
   const images = new Set<string>();
   const audio = new Set<string>();
@@ -34,41 +109,4 @@ export function collectEpisodeFiles(
     if (cmd.type === 'se') add(audio, 'audio', assets.se?.[cmd.name]);
   }
   return { images: [...images], audio: [...audio] };
-}
-
-/** 画像を1枚読み込んで表示できる状態にする。失敗しても止めない */
-function preloadImage(url: string): Promise<void> {
-  if (loadedImages.has(url)) return Promise.resolve();
-  const img = new Image();
-  img.src = url;
-  return img.decode().then(
-    () => void loadedImages.set(url, img),
-    () => console.warn(`画像を読み込めませんでした: ${url}`),
-  );
-}
-
-/**
- * 画像をすべて読み込む。onProgress で進み具合（読み込んだ数）を知らせる。
- * 回線が遅いときに待たせすぎないよう、timeoutMs を過ぎたら残りは裏で読み込みながら先へ進む。
- */
-export async function preloadImages(
-  urls: string[],
-  onProgress: (done: number) => void,
-  timeoutMs = 15000,
-): Promise<void> {
-  let done = 0;
-  const all = Promise.all(
-    urls.map((url) =>
-      preloadImage(url).then(() => {
-        done++;
-        onProgress(done);
-      }),
-    ),
-  );
-  await Promise.race([all, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
-}
-
-/** 音声は再生を待たせず、裏で取得してブラウザのキャッシュに入れておく */
-export function prefetchAudio(urls: string[]): void {
-  for (const url of urls) fetch(url).catch(() => {});
 }

@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes, type Reac
 import type { EpisodeInfo } from '../types';
 import { loadScenarioText, loadStoryResources, type StoryResources } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
-import { collectEpisodeFiles, prefetchAudio, preloadImages } from '../lib/preload';
+import { collectEpisodeFiles, imagesForState, isImageSettled, prefetchAudio, preloadInBackground, waitForImages } from '../lib/preload';
 import { autoWaitMs, CHAR_INTERVAL_MS, useSettings } from '../lib/settings';
 import { clearResume, getResumeIndex, markCompleted, saveResumeIndex } from '../lib/progress';
 import { playBgm, playSe, resumeAudio, stopBgm } from '../audio/audioManager';
-import { initialNovelState, restore, step, type Position, type ScenarioCommand } from '../novel/engine';
+import { initialNovelState, restore, step, type NovelState, type Position, type ScenarioCommand } from '../novel/engine';
 import { parseScenario, type ScenarioError } from '../novel/parser';
 import { characterImage, findCharacter, validateScenario } from '../novel/validate';
 import SettingsPanel from './SettingsPanel';
@@ -25,8 +25,15 @@ interface Props {
 
 const POSITIONS: Position[] = ['left', 'center', 'right'];
 
+/** 最初の場面の画像を待つ最大時間。過ぎたら画像が揃わなくても始める */
+const FIRST_SCENE_TIMEOUT_MS = 10000;
+/** 次の場面の画像を待つ最大時間 */
+const NEXT_SCENE_TIMEOUT_MS = 3000;
+
 interface Loaded {
   commands: ScenarioCommand[];
+  /** 最初に表示する場面（続きから再開するときは再開位置） */
+  initialState: NovelState;
   resources: StoryResources;
   /** シナリオや設定の問題（再生は続けられる） */
   problems: string[];
@@ -36,7 +43,6 @@ interface Loaded {
 export default function NovelScreen({ storyId, episode, resume, onExit, onComplete }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,15 +54,20 @@ export default function NovelScreen({ storyId, episode, resume, onExit, onComple
         ...validateScenario(parsed.commands, resources.characters, resources.assets),
       ].sort((a, b) => a.line - b.line);
 
-      // 場面が切り替わった瞬間に画像が表示されるよう、使う画像を先にすべて読み込む
-      const files = collectEpisodeFiles(storyId, parsed.commands, resources.characters, resources.assets);
+      // 開始時は最初の場面の画像だけを待ち、残りは再生しながら登場順に裏で読み込む
+      const resumeIndex = resume ? getResumeIndex(storyId, episode.id) : undefined;
+      const initialState =
+        resumeIndex !== undefined ? restore(parsed.commands, resumeIndex) : step(parsed.commands, initialNovelState);
+      const context = { storyId, characters: resources.characters, assets: resources.assets };
+      const files = collectEpisodeFiles(parsed.commands, context);
       prefetchAudio(files.audio);
-      setProgress({ done: 0, total: files.images.length });
-      await preloadImages(files.images, (done) => !cancelled && setProgress({ done, total: files.images.length }));
+      await waitForImages(imagesForState(initialState, context), FIRST_SCENE_TIMEOUT_MS);
+      preloadInBackground(files.images);
 
       if (cancelled) return;
       setLoaded({
         commands: parsed.commands,
+        initialState,
         resources,
         problems: [...resources.errors, ...scenarioErrors.map((e) => `${episode.file} ${e.line}行目：${e.message}`)],
       });
@@ -64,7 +75,7 @@ export default function NovelScreen({ storyId, episode, resume, onExit, onComple
     return () => {
       cancelled = true;
     };
-  }, [storyId, episode.file]);
+  }, [storyId, episode.id, episode.file, resume]);
 
   if (fatal) {
     return (
@@ -81,11 +92,6 @@ export default function NovelScreen({ storyId, episode, resume, onExit, onComple
     return (
       <div className="novel-screen novel-loading">
         <p>読み込み中…</p>
-        {progress && progress.total > 0 && (
-          <div className="loading-bar">
-            <div style={{ width: `${(progress.done / progress.total) * 100}%` }} />
-          </div>
-        )}
       </div>
     );
   }
@@ -94,7 +100,6 @@ export default function NovelScreen({ storyId, episode, resume, onExit, onComple
       {...loaded}
       storyId={storyId}
       episodeId={episode.id}
-      resume={resume}
       onExit={onExit}
       onComplete={onComplete}
     />
@@ -104,18 +109,24 @@ export default function NovelScreen({ storyId, episode, resume, onExit, onComple
 function NovelPlayer({
   storyId,
   episodeId,
-  resume,
+  initialState,
   commands,
   resources,
   problems,
   onExit,
   onComplete,
-}: Loaded & Pick<Props, 'storyId' | 'resume' | 'onExit' | 'onComplete'> & { episodeId: string }) {
+}: Loaded & Pick<Props, 'storyId' | 'onExit' | 'onComplete'> & { episodeId: string }) {
   const settings = useSettings();
-  const [state, setState] = useState(() => {
-    const index = resume ? getResumeIndex(storyId, episodeId) : undefined;
-    return index !== undefined ? restore(commands, index) : step(commands, initialNovelState);
-  });
+  const [state, setState] = useState(initialState);
+  /** 次の場面の画像を待っている間は true（その間は今の場面を表示したまま） */
+  const [waiting, setWaiting] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [auto, setAuto] = useState(false);
   const [panel, setPanel] = useState<'log' | 'settings' | null>(null);
   const [showProblems, setShowProblems] = useState(true);
@@ -176,14 +187,29 @@ function NovelPlayer({
     }
   }, [state, storyId, episodeId, onComplete]);
 
-  const advance = () => setState((s) => step(commands, s));
+  // 次の場面へ。画像がまだ届いていなければ、今の場面のまま少し待ってから切り替える
+  const advance = () => {
+    if (waiting) return;
+    const next = step(commands, state);
+    const pending = imagesForState(next, { storyId, characters, assets }).filter((url) => !isImageSettled(url));
+    if (pending.length === 0) {
+      setState(next);
+      return;
+    }
+    setWaiting(true);
+    waitForImages(pending, NEXT_SCENE_TIMEOUT_MS).then(() => {
+      if (!mounted.current) return;
+      setWaiting(false);
+      setState(next);
+    });
+  };
 
   // オート再生：全文表示後、文章の長さに応じて待ってから次へ
   useEffect(() => {
-    if (!auto || typing || panel || state.ended) return;
+    if (!auto || typing || panel || waiting || state.ended) return;
     const timer = setTimeout(advance, autoWaitMs(settings.autoSpeed, chars.length));
     return () => clearTimeout(timer);
-  }, [auto, typing, panel, state, settings.autoSpeed]);
+  }, [auto, typing, panel, waiting, state, settings.autoSpeed]);
 
   const handleTap = () => {
     resumeAudio();
@@ -275,7 +301,9 @@ function NovelPlayer({
         {state.speaker && <div className="message-name">{state.speaker}</div>}
         <div className="message-text" ref={textRef}>
           {chars.slice(0, shown).join('')}
-          {!typing && chars.length > 0 && <span className="message-next">{auto ? 'AUTO' : '▼'}</span>}
+          {!typing && chars.length > 0 && (
+            <span className={`message-next${waiting ? ' waiting' : ''}`}>{waiting ? '読み込み中' : auto ? 'AUTO' : '▼'}</span>
+          )}
         </div>
       </div>
 
