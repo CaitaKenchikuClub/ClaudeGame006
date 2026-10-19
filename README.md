@@ -7,6 +7,17 @@ React + TypeScript + Vite で作成し、GitHub Pages で公開しています�
 
 公開URL：https://caitakenchikuclub.github.io/ClaudeGame006/
 
+## よく使うツール（ショートカット）
+
+| やりたいこと | リンク |
+|---|---|
+| 📝 シナリオを書く | [シナリオエディタを開く](https://caitakenchikuclub.github.io/ClaudeGame006/tools/scenario-editor.html) |
+| 🖼 画像を登録する | ① [uploads フォルダに画像をアップロード](https://github.com/CaitaKenchikuClub/ClaudeGame006/upload/main/uploads) → ② [「画像を登録する」を実行](https://github.com/CaitaKenchikuClub/ClaudeGame006/actions/workflows/register-image.yml)（右側の「Run workflow」ボタン） |
+| 📚 新しい小説（作品）を追加する | [「新しい作品フォルダを作る」を実行](https://github.com/CaitaKenchikuClub/ClaudeGame006/actions/workflows/create-story.yml)（右側の「Run workflow」ボタン）→ 最後に [catalog.json](public/stories/catalog.json) に作品ID を追加 |
+| ⚙ 設定ファイル（JSON）を作る | [設定ファイル作成ツールを開く](https://caitakenchikuclub.github.io/ClaudeGame006/tools/json-generator.html) |
+| 🔄 画像を WebP に変換する | [WebP 変換ツールを開く](https://caitakenchikuclub.github.io/ClaudeGame006/tools/webp-converter.html) |
+| ▶ ゲームを遊ぶ | [公開ページを開く](https://caitakenchikuclub.github.io/ClaudeGame006/) |
+
 ## 説明書
 
 | 説明書 | 内容 |
