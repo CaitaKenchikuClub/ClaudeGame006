@@ -273,6 +273,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   position: absolute;
   inset: 0;
 }
+.novel-characters { isolation: isolate; } /* 中の z-index がメッセージウィンドウより前に出ないように */
 .novel-background img {
   width: 100%;
   height: 100%;
@@ -288,6 +289,8 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 }
 /* 話していないキャラ（話しているキャラが画面にいるときだけ） */
 .novel-character.dimmed { filter: brightness(0.5); }
+/* 話しているキャラは、重なったときに一番手前に出す */
+.novel-character.focused { z-index: 1; }
 .novel-character.pos-left { left: 25%; }
 .novel-character.pos-center { left: 50%; }
 .novel-character.pos-right { left: 75%; }

@@ -236,7 +236,7 @@ function NovelPlayer({
 
   const backgroundFile = state.background ? assets.backgrounds?.[state.background] : undefined;
   const stillFile = state.still ? assets.stills?.[state.still] : undefined;
-  // 話している（心の声の）キャラが出ていれば、ほかのキャラを暗くする
+  // 話している（心の声の）キャラが出ていれば、そのキャラを一番手前にし、ほかのキャラを暗くする
   const focusId = focusedCharacterId(state, characters);
 
   return (
@@ -259,7 +259,7 @@ function NovelPlayer({
             return (
               <SafeImage
                 key={`${pos}-${info.id}`}
-                className={`novel-character pos-${pos}${focusId && focusId !== info.id ? ' dimmed' : ''}`}
+                className={`novel-character pos-${pos}${focusId ? (focusId === info.id ? ' focused' : ' dimmed') : ''}`}
                 style={{
                   height: `${display.height}%`,
                   bottom: `${-display.offsetY}%`,
