@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebP 変換ツール</title>
+    <style>
+      :root {
+        --bg: #1b1d24;
+        --surface: #262933;
+        --surface-2: #30343f;
+        --text: #ecebe8;
+        --text-sub: #a9abb3;
+        --accent: #d9a35b;
+        --warn: #e5b56b;
+        --error: #e5776b;
+        font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 16px; }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .lead { margin: 0 0 16px; color: var(--text-sub); font-size: 13px; line-height: 1.7; }
+      button, input, select { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      .card { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+      .options { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; font-size: 13px; }
+      .options label { display: flex; gap: 6px; align-items: center; }
+      select, input[type='text'] {
+        padding: 6px 8px;
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        background: var(--bg);
+        font-size: 13px;
+      }
+      #drop {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 160px;
+        border: 2px dashed var(--surface-2);
+        border-radius: 12px;
+        text-align: center;
+        color: var(--text-sub);
+        font-size: 14px;
+        cursor: pointer;
+        margin-bottom: 14px;
+      }
+      #drop.over { border-color: var(--accent); color: var(--text); }
+      .btn {
+        padding: 8px 14px;
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+      .notice { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.6; }
+      .notice.error { background: rgba(229, 119, 107, 0.15); color: var(--error); }
+      .notice:empty { display: none; }
+      .result { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--surface-2); }
+      .result:first-child { border-top: none; }
+      /* 透明部分が分かるように市松模様の上に表示 */
+      .thumb {
+        flex: none;
+        width: 110px;
+        height: 150px;
+        border-radius: 8px;
+        background-color: #ddd;
+        background-image:
+          linear-gradient(45deg, #aaa 25%, transparent 25%), linear-gradient(-45deg, #aaa 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #aaa 75%), linear-gradient(-45deg, transparent 75%, #aaa 75%);
+        background-size: 16px 16px;
+        background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+        object-fit: contain;
+      }
+      .info { flex: 1; min-width: 0; font-size: 13px; line-height: 1.7; }
+      .info .name { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+      .info .name input { flex: 1; min-width: 160px; }
+      .info .sub { color: var(--text-sub); }
+      .info .warn { color: var(--warn); }
+      .info .err { color: var(--error); }
+      .row-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+      #all-actions { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+      #all-actions:empty { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WebP 変換ツール</h1>
+      <p class="lead">
+        PNG・JPEG などの画像を、ゲームで使う WebP 形式に変換します。立ち絵の<strong>透明な部分はそのまま残ります</strong>。<br />
+        画像はこのブラウザの中だけで変換され、どこにも送信されません。
+      </p>
+
+      <p class="notice error" id="support"></p>
+
+      <div class="card">
+        <div class="options">
+          <label>
+            画質
+            <select id="quality">
+              <option value="0.9">立ち絵向け（90）</option>
+              <option value="0.85">背景向け（85）</option>
+              <option value="0.8">軽め（80）</option>
+              <option value="0.95">高画質（95）</option>
+            </select>
+          </label>
+          <label>
+            大きさ
+            <select id="maxSize">
+              <option value="0">そのまま</option>
+              <option value="2048">長い辺を 2048px まで縮小</option>
+              <option value="1536">長い辺を 1536px まで縮小</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <label id="drop">
+        <span>ここに画像をドラッグ＆ドロップ</span>
+        <span class="btn primary">画像を選ぶ</span>
+        <span style="font-size: 12px">（PNG・JPEG・WebP。まとめて選べます）</span>
+        <input type="file" id="files" accept="image/png,image/jpeg,image/webp" multiple hidden />
+      </label>
+
+      <div class="card" id="results-card" hidden>
+        <div id="all-actions"></div>
+        <div id="results"></div>
+      </div>
+    </main>
+
+    <script>
+      'use strict';
+
+      const results = document.getElementById('results');
+      const resultsCard = document.getElementById('results-card');
+      const allActions = document.getElementById('all-actions');
+      const converted = []; // { blob, nameInput }
+
+      const kb = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.round(bytes / 1024)}KB`);
+      const el = (tag, props = {}, ...children) => {
+        const e = document.createElement(tag);
+        Object.assign(e, props);
+        e.append(...children);
+        return e;
+      };
+
+      /** canvas の画像を WebP にする。ブラウザが WebP に対応していなければ null */
+      const toWebp = (canvas, quality) =>
+        new Promise((resolve) => canvas.toBlob((blob) => resolve(blob && blob.type === 'image/webp' ? blob : null), 'image/webp', quality));
+
+      // ブラウザが WebP 変換に対応しているか確認する
+      (async () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 1;
+        if (!(await toWebp(c, 0.9))) {
+          document.getElementById('support').textContent =
+            'このブラウザは WebP への変換に対応していません。パソコンやスマホの Chrome・Edge・Firefox で開いてください。';
+        }
+      })();
+
+      /** 画像に半透明・透明な部分があるか */
+      function hasTransparency(ctx, w, h) {
+        const data = ctx.getImageData(0, 0, w, h).data;
+        for (let i = 3; i < data.length; i += 4) if (data[i] < 255) return true;
+        return false;
+      }
+
+      async function convert(file) {
+        const quality = Number(document.getElementById('quality').value);
+        const maxSize = Number(document.getElementById('maxSize').value);
+        const thumb = el('img', { className: 'thumb', alt: '' });
+        const info = el('div', { className: 'info' }, el('div', { className: 'sub', textContent: `${file.name} を変換中…` }));
+        results.prepend(el('div', { className: 'result' }, thumb, info));
+        resultsCard.hidden = false;
+
+        try {
+          const bitmap = await createImageBitmap(file);
+          let { width, height } = bitmap;
+          const scale = maxSize && Math.max(width, height) > maxSize ? maxSize / Math.max(width, height) : 1;
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+          const canvas = el('canvas', { width, height });
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(bitmap, 0, 0, width, height);
+          const transparent = hasTransparency(ctx, width, height);
+          const blob = await toWebp(canvas, quality);
+          if (!blob) throw new Error('このブラウザは WebP への変換に対応していません');
+
+          thumb.src = URL.createObjectURL(blob);
+          // ファイル名：拡張子を .webp に。日本語などは使わないよう注意を出す
+          const base = file.name.replace(/\.[^.]+$/, '');
+          const nameInput = el('input', { type: 'text', value: `${base}.webp` });
+          const nameWarn = el('div', { className: 'warn' });
+          const checkName = () => {
+            nameWarn.textContent = /^[A-Za-z0-9_.-]+$/.test(nameInput.value)
+              ? ''
+              : 'ゲームで使うファイル名は半角英数字と _ - . にしてください';
+          };
+          nameInput.addEventListener('input', checkName);
+          checkName();
+          const download = el('button', { className: 'btn primary', textContent: 'ダウンロード' });
+          download.addEventListener('click', () => save(blob, nameInput.value));
+          converted.push({ blob, nameInput });
+
+          info.replaceChildren(
+            el('div', { className: 'name' }, nameInput),
+            nameWarn,
+            el('div', {
+              textContent: `${kb(file.size)} → ${kb(blob.size)}（${Math.round((blob.size / file.size) * 100)}%）　${width}×${height}${scale < 1 ? '（縮小）' : ''}`,
+            }),
+            el('div', {
+              className: 'sub',
+              textContent: transparent ? '透明な部分あり（そのまま残しています）' : '透明な部分なし（背景などはこれで問題ありません）',
+            }),
+            ...(blob.size > 500 * 1024 ? [el('div', { className: 'warn', textContent: '500KB を超えています。画質を下げるか、縮小を選ぶと軽くなります' })] : []),
+            el('div', { className: 'row-actions' }, download),
+          );
+          updateAllActions();
+        } catch (e) {
+          info.replaceChildren(el('div', { className: 'err', textContent: `${file.name}：変換できませんでした（${e.message}）` }));
+        }
+      }
+
+      function save(blob, name) {
+        if (!name.endsWith('.webp')) name += '.webp';
+        const url = URL.createObjectURL(blob);
+        el('a', { href: url, download: name }).click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function updateAllActions() {
+        allActions.replaceChildren();
+        if (converted.length < 2) return;
+        const all = el('button', { className: 'btn primary', textContent: `すべてダウンロード（${converted.length}枚）` });
+        all.addEventListener('click', async () => {
+          for (const c of converted) {
+            save(c.blob, c.nameInput.value);
+            await new Promise((r) => setTimeout(r, 300)); // 連続ダウンロードがまとめて止められないよう少し間をあける
+          }
+        });
+        allActions.append(all);
+      }
+
+      async function handle(files) {
+        for (const f of files) {
+          if (!f.type.startsWith('image/')) continue;
+          await convert(f);
+        }
+      }
+
+      const drop = document.getElementById('drop');
+      const input = document.getElementById('files');
+      input.addEventListener('change', () => {
+        handle([...input.files]);
+        input.value = '';
+      });
+      drop.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        drop.classList.add('over');
+      });
+      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+      drop.addEventListener('drop', (e) => {
+        e.preventDefault();
+        drop.classList.remove('over');
+        handle([...e.dataTransfer.files]);
+      });
+    </script>
+  </body>
+</html>
