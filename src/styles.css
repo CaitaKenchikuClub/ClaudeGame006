@@ -286,6 +286,9 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   transform: translateX(-50%);
   pointer-events: none;
   transition: filter 0.25s;
+  /* 髪などが画像の左右の端で切れている絵でも、まっすぐな切れ目が目立たないよう端をぼかす */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
 }
 /* 話していないキャラ（話しているキャラが画面にいるときだけ） */
 .novel-character.dimmed { filter: brightness(0.5); }

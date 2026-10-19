@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ImgHTMLAttributes, type ReactNode } from 'react';
 import type { EpisodeInfo } from '../types';
 import { loadScenarioText, loadStoryResources, type StoryResources } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
@@ -139,7 +139,8 @@ function NovelPlayer({
   const textRef = useRef<HTMLDivElement>(null);
   const interval = CHAR_INTERVAL_MS[settings.textSpeed];
 
-  useEffect(() => {
+  // 画面に描く前に表示文字数を戻す（useEffect だと、新しい文章が前の文章の文字数ぶん一瞬表示されてちらつく）
+  useLayoutEffect(() => {
     if (interval === 0 || chars.length === 0) {
       setShown(chars.length);
       return;
@@ -159,7 +160,7 @@ function NovelPlayer({
   // 一文字ずつ表示している間だけ、表示中の行が見えるよう下へスクロールする。
   // （途中タップや「一瞬」で全文を出したときは、読み始めの行が隠れないよう動かさない）
   const prevShown = useRef(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = textRef.current;
     if (el) el.scrollTop = 0;
     prevShown.current = -1;
