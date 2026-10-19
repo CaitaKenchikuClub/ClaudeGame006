@@ -2,7 +2,9 @@
   "backgrounds": {
     "王城廊下": "oujo_rouka.webp"
   },
-  "stills": {},
+  "stills": {
+    "キス我慢1": "kiss_gaman_1.webp"
+  },
   "bgm": {},
   "se": {}
 }
