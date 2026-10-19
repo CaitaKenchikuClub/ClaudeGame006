@@ -116,7 +116,8 @@
         { label: 'キャラ（右）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像右 ${n}`, none: true },
         { label: 'キャラを全部消す', line: () => '#キャラ画像 なし' },
         { label: '台詞', kind: 'characters', line: (n) => `#台詞 ${n}` },
-        { label: 'モノローグ', line: () => '#モノローグ' },
+        // plain：キャラを指定しない候補（三人称の地の文）。選ぶと line(null) が入る
+        { label: 'モノローグ', kind: 'characters', plain: 'キャラ指定なし（三人称）', line: (n) => (n === null ? '#モノローグ' : `#モノローグ ${n}`) },
         { label: '表情', kind: 'expressions', line: (n) => `#表情 ${n}` },
         { label: 'スチル', kind: 'stills', line: (n) => `#スチル ${n}`, none: true },
         { label: 'BGM', kind: 'bgm', line: (n) => `#BGM ${n}`, none: true },
@@ -149,6 +150,12 @@
                 ...(cmd.withFull ? names.fullBody.map((n) => `${n} 全身`) : []),
                 ...(cmd.none ? ['なし'] : []),
               ];
+        if (cmd.plain && (!storyLoaded || options.length === 0)) {
+          closePicker();
+          insertCommand(cmd.line(null));
+          return;
+        }
+        if (cmd.plain) options.unshift(cmd.plain);
         if (!storyLoaded || options.length === 0) {
           // 候補がないときは、名前の手前までを入れて続きを手で書いてもらう
           closePicker();
@@ -170,7 +177,7 @@
           b.textContent = opt;
           b.addEventListener('click', () => {
             closePicker();
-            insertCommand(cmd.line(opt));
+            insertCommand(cmd.line(opt === cmd.plain ? null : opt));
           });
           picker.append(b);
         }
@@ -240,6 +247,7 @@
           if (!['モノローグ', '終了'].includes(cmd) && !arg) problems.push(`${at}：#${cmd} の後に名前を書いてください`);
           if (!storyLoaded || !arg || arg === 'なし') return;
           const has = (list, name) => list.includes(name);
+          if (cmd === 'モノローグ' && !has(names.characters, arg)) problems.push(`${at}：キャラ「${arg}」は登録されていません`);
           if (cmd.startsWith('キャラ画像')) {
             const full = args.length >= 2 && args[args.length - 1] === '全身';
             const name = full ? args.slice(0, -1).join(' ') : arg;

@@ -9,8 +9,8 @@ export type ScenarioCommand = { /** シナリオファイルの行番号（エ�
   | { type: 'hideAllCharacters' }
   /** name が null ならスチルを消す */
   | { type: 'still'; name: string | null }
-  /** speaker が null ならモノローグ（地の文） */
-  | { type: 'text'; speaker: string | null; text: string }
+  /** speaker が null ならモノローグ（地の文）。thinker はそのモノローグが誰の心の声か（名前は表示しない） */
+  | { type: 'text'; speaker: string | null; thinker?: string; text: string }
   /** expression が null なら通常の画像に戻す */
   | { type: 'expression'; character: string; expression: string | null }
   /** name が null なら BGM を止める */
@@ -33,6 +33,8 @@ export interface NovelState {
   /** 直前の step で鳴らす効果音 */
   se: string[];
   speaker: string | null;
+  /** 今の文章を話している（心の声の）キャラ。立ち絵があれば、ほかのキャラを暗くする */
+  focus: string | null;
   text: string;
   ended: boolean;
 }
@@ -47,6 +49,7 @@ export const initialNovelState: NovelState = {
   bgm: null,
   se: [],
   speaker: null,
+  focus: null,
   text: '',
   ended: false,
 };
@@ -84,6 +87,7 @@ export function step(commands: ScenarioCommand[], state: NovelState): NovelState
         break;
       case 'text':
         s.speaker = cmd.speaker;
+        s.focus = cmd.speaker ?? cmd.thinker ?? null;
         s.text = cmd.text;
         return s;
       case 'end':

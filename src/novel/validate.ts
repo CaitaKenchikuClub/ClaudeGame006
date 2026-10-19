@@ -24,6 +24,9 @@ export function validateScenario(
         errors.push({ line: cmd.line, message: `キャラ「${info.name}」の全身の画像（full）が characters.json に登録されていません` });
       }
     }
+    if (cmd.type === 'text' && cmd.thinker && !findCharacter(characters, cmd.thinker)) {
+      errors.push({ line: cmd.line, message: `#モノローグ のキャラ「${cmd.thinker}」は characters.json に登録されていません` });
+    }
     if (cmd.type === 'background' && !assets.backgrounds?.[cmd.name]) {
       errors.push({ line: cmd.line, message: `背景「${cmd.name}」は assets.json の backgrounds に登録されていません` });
     }
@@ -94,4 +97,12 @@ export function fullBodyImage(info: CharacterInfo): string | undefined {
 export function displayInState(state: NovelState, name: string, info: CharacterInfo): CharacterDisplay {
   const expression = state.expressions[info.name] ?? state.expressions[info.id];
   return characterDisplay(info, !!state.fullBody[name], expression);
+}
+
+/** 今の文章のキャラが立ち絵で出ていれば、そのキャラの ID（ほかのキャラを暗くするため）。いなければ null */
+export function focusedCharacterId(state: NovelState, characters: CharacterInfo[]): string | null {
+  const focus = state.focus ? findCharacter(characters, state.focus) : undefined;
+  if (!focus) return null;
+  const onStage = Object.values(state.characters).some((name) => name !== null && findCharacter(characters, name) === focus);
+  return onStage ? focus.id : null;
 }

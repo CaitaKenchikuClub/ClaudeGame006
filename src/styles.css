@@ -284,7 +284,10 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   max-width: none;
   transform: translateX(-50%);
   pointer-events: none;
+  transition: filter 0.25s;
 }
+/* 話していないキャラ（話しているキャラが画面にいるときだけ） */
+.novel-character.dimmed { filter: brightness(0.5); }
 .novel-character.pos-left { left: 25%; }
 .novel-character.pos-center { left: 50%; }
 .novel-character.pos-right { left: 75%; }

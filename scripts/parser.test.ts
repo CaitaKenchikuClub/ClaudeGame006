@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseScenario } from '../src/novel/parser.ts';
 import { initialNovelState, restore, step } from '../src/novel/engine.ts';
-import { characterDisplay, displayInState, validateScenario } from '../src/novel/validate.ts';
+import { characterDisplay, displayInState, focusedCharacterId, validateScenario } from '../src/novel/validate.ts';
 
 const strip = (cmds: { line: number }[]) => cmds.map(({ line: _line, ...rest }) => rest);
 
@@ -196,4 +196,36 @@ test('全身の画像が登録されていないキャラに「全身」を付�
   );
   assert.deepEqual(errors.map((e) => e.line), [1]);
   assert.match(errors[0].message, /全身の画像/);
+});
+
+test('#モノローグ キャラ名 は名前を出さずにそのキャラの心の声になる', () => {
+  const { commands, errors } = parseScenario('#モノローグ チェリー\n（眠いなあ）\n#モノローグ\n朝が来た。');
+  assert.deepEqual(errors, []);
+  assert.deepEqual(strip(commands), [
+    { type: 'text', speaker: null, thinker: 'チェリー', text: '（眠いなあ）' },
+    { type: 'text', speaker: null, text: '朝が来た。' },
+  ]);
+  const characters = [
+    { id: 'kiwi', name: 'キウイ', image: 'k.webp' },
+    { id: 'cherry', name: 'チェリー', image: 'c.webp' },
+  ];
+  assert.deepEqual(validateScenario(parseScenario('#モノローグ だれか\nあ').commands, characters, {}).length, 1);
+});
+
+test('話している（心の声の）キャラが画面にいるときだけ、そのキャラに注目する', () => {
+  const characters = [
+    { id: 'kiwi', name: 'キウイ', image: 'k.webp' },
+    { id: 'cherry', name: 'チェリー', image: 'c.webp' },
+  ];
+  const { commands } = parseScenario(
+    '#キャラ画像左 キウイ\n#キャラ画像右 cherry\n#台詞 キウイ\nおはよう\n#モノローグ チェリー\nねむい\n#モノローグ\n朝\n#台詞 店員\nいらっしゃい',
+  );
+  let s = step(commands, initialNovelState);
+  assert.equal(focusedCharacterId(s, characters), 'kiwi');
+  s = step(commands, s);
+  assert.equal(focusedCharacterId(s, characters), 'cherry');
+  s = step(commands, s);
+  assert.equal(focusedCharacterId(s, characters), null);
+  s = step(commands, s);
+  assert.equal(focusedCharacterId(s, characters), null);
 });

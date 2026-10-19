@@ -40,6 +40,8 @@ export function parseScenario(source: string): ParseResult {
   let blockStart = 0;
   /** 今のブロックの話者。undefined = コマンドなしの地の文 */
   let blockSpeaker: string | null | undefined;
+  /** 今のブロックが誰のモノローグか（#モノローグ キャラ名） */
+  let blockThinker: string | undefined;
   /** #台詞 / #モノローグ の直後で、まだ文章が来ていない行番号 */
   let pendingTextCommand = 0;
 
@@ -51,12 +53,19 @@ export function parseScenario(source: string): ParseResult {
     }
     while (blockLines.length > 0 && blockLines[blockLines.length - 1].trim() === '') blockLines.pop();
     if (blockLines.length > 0) {
-      commands.push({ line: blockStart, type: 'text', speaker: blockSpeaker ?? null, text: blockLines.join('\n') });
+      commands.push({
+        line: blockStart,
+        type: 'text',
+        speaker: blockSpeaker ?? null,
+        ...(blockThinker ? { thinker: blockThinker } : {}),
+        text: blockLines.join('\n'),
+      });
     } else if (pendingTextCommand) {
       errors.push({ line: pendingTextCommand, message: 'このコマンドの後に文章がありません' });
     }
     blockLines = [];
     blockSpeaker = undefined;
+    blockThinker = undefined;
     pendingTextCommand = 0;
   };
 
@@ -111,7 +120,9 @@ export function parseScenario(source: string): ParseResult {
         }
         break;
       case 'モノローグ':
+        // 「#モノローグ チェリー」でチェリーの心の声（名前は出さず、ほかのキャラを暗くする）
         blockSpeaker = null;
+        blockThinker = arg || undefined;
         pendingTextCommand = lineNo;
         break;
       case '終了':

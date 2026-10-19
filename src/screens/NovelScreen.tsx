@@ -8,7 +8,7 @@ import { clearResume, getResumeIndex, markCompleted, saveResumeIndex } from '../
 import { playBgm, playSe, resumeAudio, stopBgm } from '../audio/audioManager';
 import { initialNovelState, restore, step, type NovelState, type Position, type ScenarioCommand } from '../novel/engine';
 import { parseScenario, type ScenarioError } from '../novel/parser';
-import { displayInState, findCharacter, validateScenario } from '../novel/validate';
+import { displayInState, findCharacter, focusedCharacterId, validateScenario } from '../novel/validate';
 import SettingsPanel from './SettingsPanel';
 import BacklogPanel, { type LogEntry } from './BacklogPanel';
 
@@ -236,6 +236,8 @@ function NovelPlayer({
 
   const backgroundFile = state.background ? assets.backgrounds?.[state.background] : undefined;
   const stillFile = state.still ? assets.stills?.[state.still] : undefined;
+  // 話している（心の声の）キャラが出ていれば、ほかのキャラを暗くする
+  const focusId = focusedCharacterId(state, characters);
 
   return (
     <div className="novel-screen" onClick={handleTap}>
@@ -257,7 +259,7 @@ function NovelPlayer({
             return (
               <SafeImage
                 key={`${pos}-${info.id}`}
-                className={`novel-character pos-${pos}`}
+                className={`novel-character pos-${pos}${focusId && focusId !== info.id ? ' dimmed' : ''}`}
                 style={{
                   height: `${display.height}%`,
                   bottom: `${-display.offsetY}%`,
