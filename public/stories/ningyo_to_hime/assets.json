@@ -1,5 +1,7 @@
 {
-  "backgrounds": {},
+  "backgrounds": {
+    "王城廊下": "oujo_rouka.webp"
+  },
   "stills": {},
   "bgm": {},
   "se": {}
