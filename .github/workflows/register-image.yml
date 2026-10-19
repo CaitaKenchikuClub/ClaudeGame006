@@ -1,0 +1,94 @@
+name: 画像を登録する
+
+# Actions タブから手動で実行する。uploads フォルダの画像を WebP に変換して作品フォルダに置き、
+# characters.json / assets.json / info.json に反映して保存する。
+on:
+  workflow_dispatch:
+    inputs:
+      story_id:
+        description: '作品ID（例：ningyo_to_hime）'
+        required: true
+        type: string
+      kind:
+        description: '画像の種類'
+        required: true
+        type: choice
+        options:
+          - バストアップ
+          - 全身
+          - 表情
+          - 背景
+          - スチル
+          - 表紙
+      name:
+        description: '名前：キャラ名（例：キウイ）、または背景・スチルのシナリオでの名前（例：中庭）。表紙は空欄'
+        required: false
+        type: string
+      english_name:
+        description: '英字の名前：新しいキャラのID・新しい背景などのファイル名（例：kiwi、courtyard）。差し替えのときは空欄でOK'
+        required: false
+        type: string
+      expression:
+        description: '表情名（種類が「表情」のときだけ。例：笑顔）'
+        required: false
+        type: string
+      upload_file:
+        description: 'uploads 内の画像ファイル名（uploads に画像が1枚だけなら空欄でOK）'
+        required: false
+        type: string
+      update_json:
+        description: '設定ファイル（JSON）にも反映する'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: register-image
+  cancel-in-progress: false
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet pillow
+
+      # 入力値は環境変数で渡し、スクリプトの中で確認する（シェルに直接埋め込まない）
+      - name: 画像を変換して登録する
+        env:
+          STORY_ID: ${{ inputs.story_id }}
+          KIND: ${{ inputs.kind }}
+          NAME: ${{ inputs.name }}
+          ENGLISH_NAME: ${{ inputs.english_name }}
+          EXPRESSION: ${{ inputs.expression }}
+          UPLOAD_FILE: ${{ inputs.upload_file }}
+          UPDATE_JSON: ${{ inputs.update_json }}
+        run: python3 scripts/register_image.py
+
+      - name: GitHub に保存する
+        env:
+          BRANCH: ${{ github.ref_name }}
+          KIND: ${{ inputs.kind }}
+          STORY_ID: ${{ inputs.story_id }}
+          NAME: ${{ inputs.name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A public/stories uploads
+          git commit -m "画像を登録：$STORY_ID の$KIND $NAME"
+          git pull --rebase origin "$BRANCH"
+          git push origin "HEAD:$BRANCH"
+
+      # Actions が保存した変更では公開処理が自動で始まらないため、ここで始める
+      - name: 公開処理を始める
+        if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main

@@ -20,7 +20,9 @@ React + TypeScript + Vite で作成し、GitHub Pages で公開しています�
 
 設定ファイル（JSON）は **[設定ファイル作成ツール](https://caitakenchikuclub.github.io/ClaudeGame006/tools/json-generator.html)** で、入力欄に書くだけで作れます（コピー・ダウンロード・既存ファイルの読み込みに対応）。
 
-画像は **[WebP 変換ツール](https://caitakenchikuclub.github.io/ClaudeGame006/tools/webp-converter.html)** で、透明な部分を残したまま WebP 形式に変換できます（ブラウザの中だけで変換し、画像はどこにも送信されません）。
+画像は **Actions タブの「画像を登録する」** で、`uploads` フォルダに入れた画像を WebP に変換して作品フォルダに置き、設定ファイルにも自動で反映できます（あなたのアカウントだけが使えます）。
+
+手元で変換だけしたいときは **[WebP 変換ツール](https://caitakenchikuclub.github.io/ClaudeGame006/tools/webp-converter.html)** で、透明な部分を残したまま WebP 形式に変換できます（ブラウザの中だけで変換し、画像はどこにも送信されません）。
 
 シナリオは **[シナリオエディタ](https://caitakenchikuclub.github.io/ClaudeGame006/tools/scenario-editor.html)** で、コマンドをボタンで入れながら書けます（登録済みの名前を選択・かんたんチェック・ダウンロードに対応）。
 
@@ -35,7 +37,8 @@ templates/story_template … 新しい作品のひな形（設定ファイルの
 docs/                    … 説明書
 src/                     … ゲーム本体
 scripts/                 … 公開前チェックとテスト
-.github/workflows/       … GitHub Pages への自動公開、作品フォルダ作成ボタン
+uploads/                 … 画像登録ボタンで使う画像の受け取り口
+.github/workflows/       … GitHub Pages への自動公開、作品フォルダ作成ボタン、画像登録ボタン
 ```
 
 ## 開発コマンド
