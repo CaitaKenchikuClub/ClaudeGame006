@@ -9,10 +9,16 @@
   "originalUrl": "https://caita.ai/series/01KGCSJZ1RBQDZB05VKKEB3SVZ",
   "episodes": [
     {
-      "id": "episode_maidkiss_01",
-      "title": "メイド二人の甘い約束",
-      "file": "episode_maidkiss_01.txt",
+      "id": "episode_01",
+      "title": "【本編】プロローグ",
+      "file": "episode_01.txt",
       "order": 1
+    },
+    {
+      "id": "episode_maidkiss_01",
+      "title": "【スピンオフ メイド二人の甘い約束】1話 甘い約束",
+      "file": "episode_maidkiss_01.txt",
+      "order": 100
     }
   ]
 }
