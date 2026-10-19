@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { EpisodeInfo, StoryInfo } from '../types';
 import { sortedEpisodes } from '../lib/stories';
 import { storyFileUrl } from '../lib/paths';
@@ -11,11 +12,20 @@ interface Props {
   onList: () => void;
 }
 
+/** 読了画面を表示してからボタンを押せるようになるまでの時間 */
+const BUTTON_LOCK_MS = 1000;
+
 /** エピソード読了画面 */
 export default function CompleteScreen({ story, episode, onPlay, onDetail, onList }: Props) {
   const episodes = sortedEpisodes(story);
   const next = episodes[episodes.findIndex((ep) => ep.id === episode.id) + 1];
   const hasOthers = episodes.length > 1;
+  // 文章を送るタップの勢いでボタンを押してしまわないよう、表示直後は少しの間ボタンを押せなくする
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), BUTTON_LOCK_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="complete-screen">
@@ -36,8 +46,8 @@ export default function CompleteScreen({ story, episode, onPlay, onDetail, onLis
         ありがとうございました。
       </p>
 
-      <div className="complete-actions">
-        <OriginalLink url={story.originalUrl} label="原作の続きを読む" />
+      <div className={`complete-actions${ready ? '' : ' locked'}`} aria-disabled={!ready}>
+        <OriginalLink url={story.originalUrl} label="原作を読む" />
         {next && (
           <button className="btn btn-outline" onClick={() => onPlay(next)}>
             次のエピソード：{next.title}

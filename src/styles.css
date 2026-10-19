@@ -285,6 +285,9 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 .complete-story { margin: 6px 0 0; color: var(--text-sub); font-size: 13px; }
 .complete-message { margin: 20px 0 28px; font-size: 14px; line-height: 1.8; }
 .complete-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+/* 表示直後はボタンを押せない（連打で誤って押さないように）。押せるようになったらはっきり表示する */
+.complete-actions { transition: opacity 0.3s; }
+.complete-actions.locked { pointer-events: none; opacity: 0.4; }
 
 /* ---- ノベルゲーム画面 ---- */
 .novel-screen {
