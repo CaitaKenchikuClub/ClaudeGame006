@@ -17,6 +17,11 @@
       "name": "ルリ",
       "full": "ruri.webp",
       "image": "ruri_bust.webp"
+    },
+    {
+      "id": "sakura",
+      "name": "サクラ",
+      "full": "sakura.webp"
     }
   ]
 }
