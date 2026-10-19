@@ -11,6 +11,11 @@
       "name": "チェリー",
       "image": "cherry_bust.webp",
       "full": "cherry.webp"
+    },
+    {
+      "id": "ruri",
+      "name": "ルリ",
+      "full": "ruri.webp"
     }
   ]
 }
