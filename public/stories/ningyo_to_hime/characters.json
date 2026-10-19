@@ -21,7 +21,8 @@
     {
       "id": "sakura",
       "name": "サクラ",
-      "full": "sakura.webp"
+      "full": "sakura.webp",
+      "image": "sakura_bust.webp"
     }
   ]
 }
