@@ -24,43 +24,46 @@ async function fetchJson<T>(url: string): Promise<T> {
   }
 }
 
-export interface StoryLoadResult {
-  stories: StoryInfo[];
-  /** 読み込みに失敗した作品のエラー内容（1作品の失敗で全体を止めない） */
-  errors: string[];
+let catalogCache: Promise<string[]> | null = null;
+const infoCache = new Map<string, Promise<StoryInfo>>();
+
+/** catalog.json に登録された作品ID の一覧（2回目以降は前回の結果を使う） */
+export function loadCatalog(): Promise<string[]> {
+  catalogCache ??= fetchJson<Catalog>(storiesUrl('catalog.json'))
+    .then((catalog) => {
+      if (!Array.isArray(catalog.stories)) throw new Error('catalog.json に "stories" の一覧がありません');
+      return catalog.stories;
+    })
+    .catch((e) => {
+      catalogCache = null; // 失敗したときは次回もう一度読み込む
+      throw e;
+    });
+  return catalogCache;
 }
 
-let storiesCache: Promise<StoryLoadResult> | null = null;
+/** 1作品の info.json（2回目以降は前回の結果を使う） */
+export function loadStoryInfo(id: string): Promise<StoryInfo> {
+  let info = infoCache.get(id);
+  if (!info) {
+    info = fetchJson<StoryInfo>(storyFileUrl(id, 'info.json'))
+      .then((r) => ({ ...r, id }))
+      .catch((e) => {
+        infoCache.delete(id);
+        throw e;
+      });
+    infoCache.set(id, info);
+  }
+  return info;
+}
 
-/** catalog.json に登録された作品の info.json をすべて読み込む（2回目以降は前回の結果を使う） */
-export function loadStories(): Promise<StoryLoadResult> {
-  storiesCache ??= fetchStories().catch((e) => {
-    storiesCache = null; // 失敗したときは次回もう一度読み込む
-    throw e;
-  });
-  return storiesCache;
+/** 作品一覧を先に読み込んでおく（タイトル画面から呼ぶ。表紙画像は読み込まない） */
+export function prefetchStoryList(): void {
+  loadCatalog().then((ids) => ids.forEach((id) => loadStoryInfo(id).catch(() => {})), () => {});
 }
 
 /** エピソードを表示順に並べる */
 export function sortedEpisodes(story: StoryInfo): EpisodeInfo[] {
   return [...(story.episodes ?? [])].sort((a, b) => a.order - b.order);
-}
-
-async function fetchStories(): Promise<StoryLoadResult> {
-  const catalog = await fetchJson<Catalog>(storiesUrl('catalog.json'));
-  if (!Array.isArray(catalog.stories)) {
-    throw new Error('catalog.json に "stories" の一覧がありません');
-  }
-  const results = await Promise.allSettled(
-    catalog.stories.map((id) => fetchJson<StoryInfo>(storyFileUrl(id, 'info.json'))),
-  );
-  const stories: StoryInfo[] = [];
-  const errors: string[] = [];
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled') stories.push({ ...r.value, id: catalog.stories[i] });
-    else errors.push(`${catalog.stories[i]}: ${(r.reason as Error).message}`);
-  });
-  return { stories, errors };
 }
 
 export interface StoryResources {

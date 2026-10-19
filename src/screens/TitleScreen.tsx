@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { prefetchStoryList } from '../lib/stories';
 import SettingsPanel from './SettingsPanel';
 
 interface Props {
@@ -7,6 +8,8 @@ interface Props {
 
 export default function TitleScreen({ onStart }: Props) {
   const [showSettings, setShowSettings] = useState(false);
+  // スタートが押される前に、作品一覧の読み込みを始めておく
+  useEffect(prefetchStoryList, []);
 
   return (
     <div className="title-screen">

@@ -159,14 +159,43 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 }
 .story-card:active { background: var(--surface-2); }
 .story-cover {
+  position: relative;
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 90px;
   aspect-ratio: 5 / 7;
-  object-fit: cover; /* 比率を保ったままトリミング */
+  overflow: hidden;
   border-radius: 6px;
   background: var(--surface-2);
 }
-.story-cover.missing { visibility: hidden; }
+.story-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 比率を保ったままトリミング */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.story-cover img.loaded { opacity: 1; }
+.now-loading {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--text-sub);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+/* 作品情報を読み込み中の行 */
+.skeleton-line {
+  display: block;
+  height: 12px;
+  margin: 4px 0;
+  border-radius: 4px;
+  background: var(--surface-2);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.4; } }
 .story-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .story-title { display: block; margin: 0; font-weight: bold; font-size: 16px; }
 .story-author { display: block; margin: 0; font-size: 13px; color: var(--text-sub); }
