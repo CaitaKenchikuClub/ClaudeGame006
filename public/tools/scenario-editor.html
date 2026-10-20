@@ -64,7 +64,55 @@
       #problems { margin: 0; padding: 0 0 0 1.2em; color: var(--warn); font-size: 12px; line-height: 1.6; max-height: 6.5em; overflow: auto; }
       #problems:empty { display: none; }
       footer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-      .toast { color: var(--accent); font-size: 13px; }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        z-index: 10;
+        transform: translateX(-50%);
+        max-width: calc(100% - 32px);
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        color: var(--accent);
+        font-size: 13px;
+        pointer-events: none;
+      }
+      .toast:empty { display: none; }
+      .mobile-bar { display: none; }
+
+      /* ---------- スマホ（キーボードの上にコマンドバーを出す） ---------- */
+      /* 画面全体を「キーボードに隠れていない範囲」（--vvh）に合わせ、本文は入力欄の中だけでスクロールする */
+      body.mobile {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--vvh, 100%);
+        transform: translateY(var(--vvtop, 0px));
+        max-width: none;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        gap: 6px;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      body.mobile.keyboard { padding-bottom: 6px; }
+      body.mobile #commands { display: none; }
+      /* iOS は 16px 未満の入力欄で自動拡大して画面が跳ねるため 16px にする */
+      body.mobile textarea { min-height: 0; padding: 10px; font-size: 16px; line-height: 1.7; }
+      body.mobile footer { order: 8; }
+      body.mobile #picker { order: 9; flex: none; max-height: 40%; overflow-y: auto; }
+      body.mobile #picker .btn { padding: 8px 12px; font-size: 14px; }
+      body.mobile .mobile-bar { order: 10; display: flex; flex: none; gap: 4px; }
+      .mobile-bar .btn { flex: 1; min-width: 0; padding: 10px 2px; font-size: 14px; }
+      .mobile-bar .btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: bold; }
+      .mobile-bar .kb-close { display: none; flex: none; padding: 10px 8px; }
+      /* キーボード表示中は、作品の読み込み欄・保存ボタン・チェック結果を隠して本文を広くする */
+      body.mobile.keyboard header,
+      body.mobile.keyboard footer,
+      body.mobile.keyboard #problems { display: none; }
+      body.mobile.keyboard .mobile-bar .kb-close { display: block; }
+      body.mobile .toast { position: absolute; bottom: auto; top: 8px; }
       .help { font-size: 12px; color: var(--text-sub); }
       .help a { color: var(--accent); }
     </style>
@@ -91,9 +139,12 @@
       <button class="btn" id="copy">コピー</button>
       <label class="btn">ファイルを開く<input type="file" id="open" accept=".txt,text/plain" hidden /></label>
       <button class="btn" id="clear">新規</button>
-      <span class="toast" id="toast"></span>
       <span class="help">書き方は <a href="https://github.com/CaitaKenchikuClub/ClaudeGame006/blob/main/docs/シナリオの書き方.md" target="_blank" rel="noopener">シナリオの書き方</a></span>
     </footer>
+
+    <!-- スマホ用のコマンドバー（キーボードのすぐ上に出る） -->
+    <nav class="mobile-bar" id="mobile-bar" aria-label="コマンド"></nav>
+    <span class="toast" id="toast" role="status"></span>
 
     <script>
       'use strict';
@@ -109,32 +160,71 @@
 
       // ---------- コマンドのボタン ----------
       // kind：名前の候補の種類。line：入れる文字。none：「なし」も候補に出す
+      // cat：スマホのコマンドバーでの分類。short：分類の中で使う短い名前
       const COMMANDS = [
-        { label: '背景', kind: 'backgrounds', line: (n) => `#背景 ${n}` },
-        { label: 'キャラ（中央）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像 ${n}` },
-        { label: 'キャラ（左）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像左 ${n}`, none: true },
-        { label: 'キャラ（右）', kind: 'characters', withFull: true, line: (n) => `#キャラ画像右 ${n}`, none: true },
-        { label: 'キャラを全部消す', line: () => '#キャラ画像 なし' },
-        { label: '台詞', kind: 'characters', line: (n) => `#台詞 ${n}` },
+        { label: '背景', cat: '背景', kind: 'backgrounds', line: (n) => `#背景 ${n}` },
+        { label: 'キャラ（中央）', cat: 'キャラ', short: '中央に出す', kind: 'characters', withFull: true, line: (n) => `#キャラ画像 ${n}` },
+        { label: 'キャラ（左）', cat: 'キャラ', short: '左に出す', kind: 'characters', withFull: true, line: (n) => `#キャラ画像左 ${n}`, none: true },
+        { label: 'キャラ（右）', cat: 'キャラ', short: '右に出す', kind: 'characters', withFull: true, line: (n) => `#キャラ画像右 ${n}`, none: true },
+        { label: 'キャラを全部消す', cat: 'キャラ', short: '全部消す', line: () => '#キャラ画像 なし' },
+        { label: '台詞', cat: '文章', kind: 'characters', line: (n) => `#台詞 ${n}` },
         // plain：キャラを指定しない候補（三人称の地の文）。選ぶと line(null) が入る
-        { label: 'モノローグ', kind: 'characters', plain: 'キャラ指定なし（三人称）', line: (n) => (n === null ? '#モノローグ' : `#モノローグ ${n}`) },
-        { label: '表情', kind: 'expressions', line: (n) => `#表情 ${n}` },
-        { label: 'スチル', kind: 'stills', line: (n) => `#スチル ${n}`, none: true },
-        { label: 'BGM', kind: 'bgm', line: (n) => `#BGM ${n}`, none: true },
-        { label: '効果音', kind: 'se', line: (n) => `#効果音 ${n}` },
-        { label: '終了', line: () => '#終了' },
+        { label: 'モノローグ', cat: '文章', kind: 'characters', plain: 'キャラ指定なし（三人称）', line: (n) => (n === null ? '#モノローグ' : `#モノローグ ${n}`) },
+        { label: '表情', cat: 'キャラ', kind: 'expressions', line: (n) => `#表情 ${n}` },
+        { label: 'スチル', cat: '演出', kind: 'stills', line: (n) => `#スチル ${n}`, none: true },
+        { label: 'BGM', cat: '演出', kind: 'bgm', line: (n) => `#BGM ${n}`, none: true },
+        { label: '効果音', cat: '演出', kind: 'se', line: (n) => `#効果音 ${n}` },
+        { label: '終了', cat: 'その他', line: () => '#終了' },
       ];
+      const CATEGORIES = ['背景', 'キャラ', '文章', '演出', 'その他'];
 
-      const commandBar = document.getElementById('commands');
-      for (const cmd of COMMANDS) {
+      const makeButton = (label, onClick, className = 'btn') => {
         const b = document.createElement('button');
-        b.className = 'btn cmd';
-        b.textContent = cmd.label;
-        b.addEventListener('click', () => onCommand(cmd));
-        commandBar.append(b);
+        b.type = 'button';
+        b.className = className;
+        b.textContent = label;
+        b.addEventListener('click', onClick);
+        return b;
+      };
+
+      // PC：すべてのコマンドを上に並べる
+      const commandBar = document.getElementById('commands');
+      for (const cmd of COMMANDS) commandBar.append(makeButton(cmd.label, () => onCommand(cmd), 'btn cmd'));
+
+      // スマホ：分類ごとのボタン。押すとその分類のコマンドを選ぶ欄が開く
+      const mobileBar = document.getElementById('mobile-bar');
+      const categoryButtons = new Map();
+      for (const cat of CATEGORIES) {
+        const b = makeButton(cat, () => (openCategory === cat ? closePicker() : showCategory(cat)), 'btn cmd');
+        categoryButtons.set(cat, b);
+        mobileBar.append(b);
+      }
+      // キーボードを閉じて、保存などのボタンを出す
+      mobileBar.append(makeButton('完了', () => { closePicker(); editor.blur(); }, 'btn kb-close'));
+
+      // コマンドのボタンを押しても入力欄からフォーカスが外れないようにする
+      // （キーボードが閉じず、カーソル位置・選択範囲・変換中の文字がそのまま残る）
+      for (const el of [commandBar, picker, mobileBar]) {
+        el.addEventListener('mousedown', (e) => e.target.closest('button') && e.preventDefault());
       }
 
-      function onCommand(cmd) {
+      /** 今開いている分類（スマホ） */
+      let openCategory = null;
+      function showCategory(cat) {
+        const cmds = COMMANDS.filter((c) => c.cat === cat);
+        if (cmds.length === 1) {
+          // 1つしかない分類（背景・その他）は、すぐにそのコマンドへ
+          onCommand(cmds[0], cat);
+          return;
+        }
+        showPanel(`「${cat}」のコマンドを選んでください`, [
+          ...cmds.map((c) => makeButton(c.short ?? c.label, () => onCommand(c, cat), 'btn cmd')),
+          makeButton('閉じる', closePicker),
+        ], cat);
+      }
+
+      /** cat：スマホの分類から選んだとき、その分類（「戻る」に使う） */
+      function onCommand(cmd, cat = null) {
         if (!cmd.kind) {
           closePicker();
           insertCommand(cmd.line());
@@ -153,51 +243,143 @@
         // 登録済みの名前がなくても選択欄を出し、「ほかの名前（手で書く）」を選べるようにする
         const registered = options.filter((o) => o !== 'なし').length;
         if (cmd.plain) options.unshift(cmd.plain);
-        openPicker(cmd, options, registered === 0);
+        openPicker(cmd, options, registered === 0, cat);
       }
 
-      function openPicker(cmd, options, noNames) {
-        picker.replaceChildren();
-        const label = document.createElement('div');
-        label.className = 'label';
-        label.textContent = !noNames
+      function openPicker(cmd, options, noNames, cat) {
+        const message = !noNames
           ? `「${cmd.label}」に入れる名前を選んでください`
           : storyLoaded
             ? `「${cmd.label}」に登録されている名前はありません。「ほかの名前（手で書く）」を選んでください`
             : `作品を読み込むと、「${cmd.label}」に登録されている名前から選べます`;
-        picker.append(label);
-        for (const opt of options) {
-          const b = document.createElement('button');
-          b.className = 'btn';
-          b.textContent = opt;
-          b.addEventListener('click', () => {
+        const hasBack = cat && COMMANDS.filter((c) => c.cat === cat).length > 1;
+        showPanel(message, [
+          ...options.map((opt) =>
+            makeButton(opt, () => {
+              closePicker();
+              insertCommand(cmd.line(opt === cmd.plain ? null : opt));
+            }),
+          ),
+          makeButton('ほかの名前（手で書く）', () => {
             closePicker();
-            insertCommand(cmd.line(opt === cmd.plain ? null : opt));
-          });
-          picker.append(b);
-        }
-        const other = document.createElement('button');
-        other.className = 'btn';
-        other.textContent = 'ほかの名前（手で書く）';
-        other.addEventListener('click', () => {
-          closePicker();
-          insertCommand(cmd.line(''), true);
-        });
-        const cancel = document.createElement('button');
-        cancel.className = 'btn';
-        cancel.textContent = 'やめる';
-        cancel.addEventListener('click', () => { closePicker(); editor.focus(); });
-        picker.append(other, cancel);
-        picker.classList.add('open');
+            insertCommand(cmd.line(''), true);
+          }),
+          ...(hasBack ? [makeButton('‹ 戻る', () => showCategory(cat))] : []),
+          makeButton('やめる', () => {
+            closePicker();
+            restoreEditorFocus();
+          }),
+        ], cat);
       }
-      const closePicker = () => picker.classList.remove('open');
+
+      /** 選択欄に案内文とボタンを出す（PC は上、スマホはコマンドバーのすぐ上） */
+      function showPanel(message, buttons, cat = null) {
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = message;
+        picker.replaceChildren(label, ...buttons);
+        picker.scrollTop = 0;
+        picker.classList.add('open');
+        setOpenCategory(cat);
+        keepCaretVisibleSoon();
+      }
+      function closePicker() {
+        picker.classList.remove('open');
+        setOpenCategory(null);
+        keepCaretVisibleSoon();
+      }
+      function setOpenCategory(cat) {
+        openCategory = cat;
+        for (const [c, b] of categoryButtons) b.classList.toggle('active', c === cat);
+      }
+
+      // ---------- カーソル位置の記憶 ----------
+      // 入力欄からフォーカスが外れても、最後のカーソル位置・選択範囲に入れられるよう覚えておく
+      let savedSelection = { start: 0, end: 0 };
+      /** 日本語入力の変換中なら true */
+      let composing = false;
+      const rememberSelection = () => {
+        if (document.activeElement === editor && !composing) {
+          savedSelection = { start: editor.selectionStart, end: editor.selectionEnd };
+        }
+      };
+      for (const type of ['select', 'keyup', 'mouseup', 'touchend', 'input', 'focus']) {
+        editor.addEventListener(type, () => setTimeout(rememberSelection, 0));
+      }
+      document.addEventListener('selectionchange', rememberSelection);
+      editor.addEventListener('compositionstart', () => (composing = true));
+      editor.addEventListener('compositionend', () => {
+        composing = false;
+        setTimeout(rememberSelection, 0);
+      });
+
+      /** 入力欄にフォーカスを戻し、覚えておいたカーソル位置・選択範囲に戻す */
+      function restoreEditorFocus() {
+        if (document.activeElement === editor) return;
+        editor.focus({ preventScroll: true });
+        const len = editor.value.length;
+        editor.setSelectionRange(Math.min(savedSelection.start, len), Math.min(savedSelection.end, len));
+      }
+
+      /**
+       * 変換中の文字を確定させてから続ける。
+       * カーソル位置を設定し直すと多くのブラウザは確定するが、確定しなければ何もしない（入力中の文字を壊さないため）
+       */
+      function afterComposition(action) {
+        if (!composing) {
+          action();
+          return;
+        }
+        let finished = false;
+        const finish = (ok) => {
+          if (finished) return;
+          finished = true;
+          editor.removeEventListener('compositionend', onEnd);
+          if (ok) action();
+          else toast('変換中の文字を確定してから、もう一度コマンドを選んでください');
+        };
+        const onEnd = () => setTimeout(() => finish(true), 0);
+        editor.addEventListener('compositionend', onEnd);
+        const pos = editor.selectionEnd;
+        editor.setSelectionRange(pos, pos);
+        setTimeout(() => finish(!composing), 400);
+      }
 
       /**
        * カーソルのある行にコマンドを1行で入れる（行に文字があれば、その下の行に入れる）。
+       * 文章を選択しているときは、選んだ文章を消さないよう、その最初の行の上に入れる。
        * typeName：名前を手で書くので、コマンドの行末にカーソルを残す
        */
       function insertCommand(line, typeName = false) {
-        editor.focus();
+        restoreEditorFocus();
+        afterComposition(() => {
+          if (editor.selectionStart !== editor.selectionEnd) insertAboveSelection(line, typeName);
+          else insertAtCaret(line, typeName);
+          rememberSelection();
+          save();
+          check();
+          keepCaretVisibleSoon();
+        });
+      }
+
+      /** 直前の行が文章なら1行空けて、コマンドのまとまりを見やすくする */
+      const needsGap = (prevLine) => prevLine.trim() !== '' && !/^[#＃]/.test(prevLine.trim());
+
+      function insertAboveSelection(line, typeName) {
+        const v = editor.value;
+        const { selectionStart: start, selectionEnd: end } = editor;
+        const lineStart = v.lastIndexOf('\n', start - 1) + 1;
+        const prevLine = lineStart > 0 ? v.slice(v.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1) : '';
+        const gap = needsGap(prevLine) ? '\n' : '';
+        const text = gap + line + '\n';
+        editor.setSelectionRange(lineStart, lineStart);
+        insertText(text);
+        // 名前を手で書くときはコマンドの行末へ、それ以外は選択していた文章の終わりへ
+        const caret = typeName ? lineStart + gap.length + line.length : end + text.length;
+        editor.setSelectionRange(caret, caret);
+      }
+
+      function insertAtCaret(line, typeName) {
         const v = editor.value;
         const pos = editor.selectionStart;
         const lineStart = v.lastIndexOf('\n', pos - 1) + 1;
@@ -207,13 +389,11 @@
         // 空の行ならその行に、文字がある行ならその下に入れる
         const prevLine = emptyLine ? v.slice(v.lastIndexOf('\n', lineStart - 2) + 1, Math.max(lineStart - 1, 0)) : current;
         // 直前が文章なら1行空けて、コマンドのまとまりを見やすくする
-        const gap = lineStart > 0 || !emptyLine ? (prevLine.trim() !== '' && !/^[#＃]/.test(prevLine.trim()) ? '\n' : '') : '';
+        const gap = lineStart > 0 || !emptyLine ? (needsGap(prevLine) ? '\n' : '') : '';
         const text = (emptyLine ? '' : '\n') + gap + line + (typeName ? '' : '\n');
         if (emptyLine) editor.setSelectionRange(lineStart, lineEnd);
         else editor.setSelectionRange(lineEnd, lineEnd);
         insertText(text);
-        save();
-        check();
       }
 
       /** 元に戻す（Ctrl+Z）が効くように、ブラウザの入力として文字を入れる */
@@ -223,6 +403,74 @@
           editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, 'end');
         }
       }
+
+      // ---------- 編集中の行を見えるようにする ----------
+      const MIRROR_STYLES = ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth',
+        'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize'];
+      /** カーソルの行の上端（入力欄の中での位置）。折り返しも反映するため、同じ見た目の見えない要素で測る */
+      function caretTop() {
+        const style = getComputedStyle(editor);
+        const mirror = document.createElement('div');
+        for (const key of MIRROR_STYLES) mirror.style[key] = style[key];
+        Object.assign(mirror.style, { position: 'absolute', top: '0', left: '-9999px', visibility: 'hidden', whiteSpace: 'pre-wrap', overflowWrap: 'break-word' });
+        mirror.style.width = editor.clientWidth + 'px';
+        mirror.style.borderWidth = '0';
+        mirror.textContent = editor.value.slice(0, editor.selectionEnd);
+        const marker = document.createElement('span');
+        marker.textContent = '\u200b';
+        mirror.append(marker);
+        document.body.append(mirror);
+        const top = marker.offsetTop;
+        mirror.remove();
+        return top;
+      }
+      /** カーソルの行が入力欄の外に出ていたら、入力欄の中だけをスクロールして見えるようにする */
+      function keepCaretVisible() {
+        if (document.activeElement !== editor) return;
+        const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 24;
+        const top = caretTop();
+        if (top < editor.scrollTop) editor.scrollTop = top - lineHeight / 2;
+        else if (top + lineHeight * 1.5 > editor.scrollTop + editor.clientHeight) {
+          editor.scrollTop = top + lineHeight * 1.5 - editor.clientHeight;
+        }
+      }
+      const keepCaretVisibleSoon = () => requestAnimationFrame(keepCaretVisible);
+
+      // ---------- スマホの画面の大きさ（キーボード対応） ----------
+      const mobileQuery = matchMedia('(pointer: coarse) and (max-width: 900px)');
+      /** キーボードを閉じているときの高さ（これより十分低ければキーボードが出ている） */
+      let fullHeight = 0;
+      let lastWidth = 0;
+      let lastHeight = 0;
+      function updateLayout() {
+        const mobile = mobileQuery.matches;
+        document.body.classList.toggle('mobile', mobile);
+        if (!mobile) {
+          document.body.classList.remove('keyboard');
+          return;
+        }
+        const vv = window.visualViewport;
+        const width = vv ? vv.width : window.innerWidth;
+        const height = vv ? vv.height : window.innerHeight;
+        if (Math.abs(width - lastWidth) > 1) fullHeight = 0; // 画面の向きが変わったら測り直す
+        lastWidth = width;
+        fullHeight = Math.max(fullHeight, window.innerHeight, height);
+        document.body.style.setProperty('--vvh', `${height}px`);
+        document.body.style.setProperty('--vvtop', `${vv ? vv.offsetTop : 0}px`);
+        // 画面のキーボードが出ていて、本文を書いているとき（ハードウェアキーボードでは高さが変わらないので隠さない）
+        const keyboard = height < fullHeight - 120 && document.activeElement === editor;
+        document.body.classList.toggle('keyboard', keyboard);
+        if (Math.abs(height - lastHeight) > 1) {
+          lastHeight = height;
+          keepCaretVisibleSoon();
+        }
+      }
+      window.visualViewport?.addEventListener('resize', updateLayout);
+      window.visualViewport?.addEventListener('scroll', updateLayout);
+      window.addEventListener('resize', updateLayout);
+      mobileQuery.addEventListener?.('change', updateLayout);
+      editor.addEventListener('focus', () => setTimeout(updateLayout, 0));
+      editor.addEventListener('blur', () => setTimeout(updateLayout, 0));
 
       // ---------- かんたんチェック ----------
       const KNOWN = ['背景', 'キャラ画像', 'キャラ画像左', 'キャラ画像右', '台詞', 'モノローグ', 'スチル', '終了', '表情', 'BGM', 'ＢＧＭ', 'bgm', '効果音'];
@@ -329,11 +577,13 @@
       storyId.addEventListener('keydown', (e) => e.key === 'Enter' && loadStory(storyId.value));
 
       // ---------- 保存・ファイル ----------
-      const toast = (msg) => {
+      let toastTimer;
+      function toast(msg) {
         const t = document.getElementById('toast');
         t.textContent = msg;
-        setTimeout(() => (t.textContent = ''), 2000);
-      };
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (t.textContent = ''), 2500);
+      }
       function save() {
         try {
           localStorage.setItem(STORAGE_KEY, editor.value);
@@ -368,6 +618,7 @@
         const file = e.target.files[0];
         if (!file) return;
         editor.value = (await file.text()).replace(/^﻿/, '');
+        savedSelection = { start: 0, end: 0 };
         document.getElementById('filename').value = file.name;
         e.target.value = '';
         save();
@@ -377,6 +628,7 @@
       document.getElementById('clear').addEventListener('click', () => {
         if (editor.value && !confirm('今の内容を消して、新しく書き始めますか？')) return;
         editor.value = '';
+        savedSelection = { start: 0, end: 0 };
         save();
         check();
         editor.focus();
@@ -388,6 +640,9 @@
         editor.value = localStorage.getItem(STORAGE_KEY) ?? '';
         document.getElementById('filename').value = localStorage.getItem(STORAGE_KEY + ':file') || 'episode_01.txt';
       } catch {}
+      // まだ入力欄を触っていなければ、文章の最後に入れる
+      savedSelection = { start: editor.value.length, end: editor.value.length };
+      updateLayout();
       loadCatalog();
       try {
         const last = localStorage.getItem(STORAGE_KEY + ':story');
