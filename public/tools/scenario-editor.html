@@ -150,26 +150,21 @@
                 ...(cmd.withFull ? names.fullBody.map((n) => `${n} 全身`) : []),
                 ...(cmd.none ? ['なし'] : []),
               ];
-        if (cmd.plain && (!storyLoaded || options.length === 0)) {
-          closePicker();
-          insertCommand(cmd.line(null));
-          return;
-        }
+        // 登録済みの名前がなくても選択欄を出し、「ほかの名前（手で書く）」を選べるようにする
+        const registered = options.filter((o) => o !== 'なし').length;
         if (cmd.plain) options.unshift(cmd.plain);
-        if (!storyLoaded || options.length === 0) {
-          // 候補がないときは、名前の手前までを入れて続きを手で書いてもらう
-          closePicker();
-          insertCommand(cmd.line(''), true);
-          return;
-        }
-        openPicker(cmd, options);
+        openPicker(cmd, options, registered === 0);
       }
 
-      function openPicker(cmd, options) {
+      function openPicker(cmd, options, noNames) {
         picker.replaceChildren();
         const label = document.createElement('div');
         label.className = 'label';
-        label.textContent = `「${cmd.label}」に入れる名前を選んでください`;
+        label.textContent = !noNames
+          ? `「${cmd.label}」に入れる名前を選んでください`
+          : storyLoaded
+            ? `「${cmd.label}」に登録されている名前はありません。「ほかの名前（手で書く）」を選んでください`
+            : `作品を読み込むと、「${cmd.label}」に登録されている名前から選べます`;
         picker.append(label);
         for (const opt of options) {
           const b = document.createElement('button');
